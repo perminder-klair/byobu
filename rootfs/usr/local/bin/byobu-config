@@ -1,0 +1,115 @@
+#!/bin/bash
+# Applies /boot/byobu.conf at boot: hostname, timezone, Wi-Fi, SSH key, panel rotation and
+# kiosk URL. The file is then renamed to byobu.conf.applied with the Wi-Fi password removed,
+# so secrets don't stay on the FAT partition. A bad value is skipped with a warning rather
+# than blocking the rest.
+set -euo pipefail
+
+CONF=/boot/byobu.conf
+KNOWN=" hostname timezone wifi_ssid wifi_password wifi_country ssh_key rotation url "
+
+warn() { echo "byobu.conf: $*" >&2; }
+
+trim() {
+  local s=$1
+  s=${s#"${s%%[![:space:]]*}"}
+  s=${s%"${s##*[![:space:]]}"}
+  printf '%s' "$s"
+}
+
+declare -A cfg
+lineno=0
+while IFS= read -r line || [[ -n $line ]]; do
+  lineno=$((lineno + 1))
+  line=${line%$'\r'}
+  [[ $line =~ ^[[:space:]]*(#|$) ]] && continue
+  if [[ $line != *=* ]]; then
+    warn "line $lineno has no '=', skipped"
+    continue
+  fi
+  key=$(trim "${line%%=*}")
+  value=$(trim "${line#*=}")
+  if [[ $value =~ ^\"(.*)\"$ ]]; then
+    value=${BASH_REMATCH[1]}
+  fi
+  [[ $KNOWN == *" $key "* ]] || warn "unknown setting '$key' on line $lineno"
+  cfg[$key]=$value
+done < "$CONF"
+
+if [[ -n ${cfg[hostname]:-} ]]; then
+  if [[ ${cfg[hostname]} =~ ^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?$ ]]; then
+    echo "${cfg[hostname]}" > /etc/hostname
+    echo "${cfg[hostname]}" > /proc/sys/kernel/hostname
+  else
+    warn "'${cfg[hostname]}' is not a valid hostname"
+  fi
+fi
+
+if [[ -n ${cfg[timezone]:-} ]]; then
+  if [[ ${cfg[timezone]} != *..* && -f /usr/share/zoneinfo/${cfg[timezone]} ]]; then
+    ln -sf "/usr/share/zoneinfo/${cfg[timezone]}" /etc/localtime
+  else
+    warn "unknown timezone '${cfg[timezone]}'"
+  fi
+fi
+
+if [[ -n ${cfg[wifi_ssid]:-} ]]; then
+  ssid=${cfg[wifi_ssid]}
+  # iwd names a profile after its SSID, hex-encoded if it has characters outside [A-Za-z0-9 _-].
+  plain='^[A-Za-z0-9 _-]+$'
+  if [[ $ssid =~ $plain ]]; then
+    profile=$ssid
+  else
+    profile="=$(printf '%s' "$ssid" | od -An -tx1 -v | tr -d ' \n')"
+  fi
+  mkdir -p /var/lib/iwd
+  if [[ -n ${cfg[wifi_password]:-} ]]; then
+    (umask 077; printf '[Security]\nPassphrase=%s\n' "${cfg[wifi_password]}" > "/var/lib/iwd/$profile.psk")
+  else
+    : > "/var/lib/iwd/$profile.open"
+  fi
+fi
+
+if [[ -n ${cfg[wifi_country]:-} ]]; then
+  country=${cfg[wifi_country]^^}
+  if [[ $country =~ ^[A-Z]{2}$ ]]; then
+    echo "options cfg80211 ieee80211_regdom=$country" > /etc/modprobe.d/byobu-wifi.conf
+    # Applies now if the Wi-Fi driver is already loaded; the modprobe option covers later boots.
+    iw reg set "$country" || true
+  else
+    warn "'${cfg[wifi_country]}' is not a two-letter country code"
+  fi
+fi
+
+if [[ -n ${cfg[ssh_key]:-} ]]; then
+  if [[ ${cfg[ssh_key]} =~ ^(ssh-|ecdsa-|sk-) ]]; then
+    install -d -m 700 /root/.ssh
+    touch /root/.ssh/authorized_keys
+    chmod 600 /root/.ssh/authorized_keys
+    grep -qxF "${cfg[ssh_key]}" /root/.ssh/authorized_keys || echo "${cfg[ssh_key]}" >> /root/.ssh/authorized_keys
+  else
+    warn "ssh_key doesn't look like an OpenSSH public key"
+  fi
+fi
+
+if [[ -n ${cfg[rotation]:-} ]]; then
+  if [[ ${cfg[rotation]} =~ ^(0|90|180|270)$ ]]; then
+    echo "${cfg[rotation]}" > /etc/byobu/rotation
+    # Re-run 90-byobu-touch.rules so the touchscreen picks up the new rotation.
+    udevadm trigger --subsystem-match=input --action=change
+  else
+    warn "rotation must be 0, 90, 180 or 270"
+  fi
+fi
+
+if [[ -n ${cfg[url]:-} ]]; then
+  if [[ ${cfg[url]} =~ ^(https?|file):// ]]; then
+    echo "${cfg[url]}" > /etc/byobu/url
+  else
+    warn "url must start with http://, https:// or file://"
+  fi
+fi
+
+sed -E 's/^([[:space:]]*wifi_password[[:space:]]*=).*/\1 (removed after applying)/' "$CONF" > "$CONF.applied"
+rm "$CONF"
+echo "Applied byobu.conf"

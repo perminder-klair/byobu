@@ -1,0 +1,13 @@
+# Raspberry Pi kernel, firmware and boot files
+linux-rpi
+raspberrypi-bootloader
+
+# Kiosk
+cage
+chromium
+noto-fonts
+wlr-randr
+
+# Networking
+iw
+iwd

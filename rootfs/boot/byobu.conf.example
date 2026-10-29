@@ -1,0 +1,23 @@
+# Byōbu settings. Copy this file to byobu.conf on the boot partition and fill it in.
+# It's applied on the next boot, then renamed to byobu.conf.applied with the Wi-Fi
+# password removed. Drop in a new byobu.conf any time to change settings.
+#
+# Format: key = value. Blank values are skipped. Quotes are optional.
+
+hostname = byobu
+# timezone = Europe/London
+
+wifi_ssid =
+wifi_password =
+# Two-letter country code, for the Wi-Fi channels allowed where you are.
+# wifi_country = GB
+
+# Public key for root SSH access. Password logins are disabled.
+ssh_key =
+
+# Panel rotation in degrees: 0, 90, 180 or 270. Touch Display 2 is portrait;
+# 90 or 270 makes it landscape, depending on which way up it's mounted.
+rotation = 270
+
+# Page the kiosk shows. Leave blank for the built-in touch test page.
+url =

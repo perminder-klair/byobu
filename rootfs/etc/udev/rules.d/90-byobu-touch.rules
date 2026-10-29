@@ -1,0 +1,2 @@
+# Rotate touchscreen input to match the panel (see /usr/local/lib/byobu/touch-matrix).
+ACTION=="add|change", SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_TOUCHSCREEN}=="1", PROGRAM="/usr/local/lib/byobu/touch-matrix", ENV{LIBINPUT_CALIBRATION_MATRIX}="%c"

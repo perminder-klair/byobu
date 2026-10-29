@@ -1,0 +1,27 @@
+# Runs cage on tty1 as the byobu user, with a logind session so it can open the display
+# and input devices. Based on cage's "Starting cage on boot with systemd" setup.
+[Unit]
+Description=Byōbu kiosk (cage + Chromium)
+After=systemd-user-sessions.service dbus.socket systemd-logind.service byobu-config.service
+Wants=dbus.socket systemd-logind.service
+Conflicts=getty@tty1.service
+After=getty@tty1.service
+
+[Service]
+User=byobu
+PAMName=byobu-kiosk
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+StandardInput=tty-fail
+StandardOutput=journal
+StandardError=journal
+UtmpIdentifier=tty1
+UtmpMode=user
+ExecStart=/usr/bin/cage -- /usr/local/bin/byobu-session
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=graphical.target

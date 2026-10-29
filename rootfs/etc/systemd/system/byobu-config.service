@@ -1,0 +1,13 @@
+[Unit]
+Description=Apply Byōbu settings from /boot/byobu.conf
+ConditionPathExists=/boot/byobu.conf
+RequiresMountsFor=/boot
+Before=network-pre.target iwd.service byobu-kiosk.service
+Wants=network-pre.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/byobu-config
+
+[Install]
+WantedBy=multi-user.target

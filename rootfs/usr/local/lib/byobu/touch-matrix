@@ -1,0 +1,12 @@
+#!/bin/bash
+# Prints the libinput calibration matrix that rotates touch input to match the panel
+# rotation in /etc/byobu/rotation. Called from 90-byobu-touch.rules.
+#
+# If touches land mirrored after rotating, the compositor turned the other way:
+# swap the 90 and 270 matrices.
+case $(cat /etc/byobu/rotation 2>/dev/null) in
+  90) echo "0 -1 1 1 0 0" ;;
+  180) echo "-1 0 1 0 -1 1" ;;
+  270) echo "0 1 0 -1 0 1" ;;
+  *) echo "1 0 0 0 1 0" ;;
+esac

@@ -1,0 +1,15 @@
+# Byōbu: Raspberry Pi 4 with Touch Display 2 (7").
+# Options: https://www.raspberrypi.com/documentation/computers/config_txt.html
+
+initramfs initramfs-linux.img followkernel
+
+dtoverlay=vc4-kms-v3d
+max_framebuffers=2
+disable_fw_kms_setup=1
+disable_overscan=1
+arm_boost=1
+
+# Touch Display 2 (7-inch) on the DSI connector, loaded explicitly rather than auto-detected.
+# The panel is rotated by the compositor and touch by libinput (/etc/byobu/rotation), not here.
+display_auto_detect=0
+dtoverlay=vc4-kms-dsi-ili9881-7inch

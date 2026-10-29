@@ -1,0 +1,4 @@
+/cache/
+/out/
+# Local settings baked into dev images; holds Wi-Fi and SSH secrets.
+/byobu.conf

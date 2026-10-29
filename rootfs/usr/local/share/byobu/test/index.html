@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Byōbu panel test</title>
+<style>
+  :root { color-scheme: dark; --bg: #121212; --fg: #e6e1d6; --muted: #6f6a60; --accent: #e0a458; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+    font: 18px system-ui, sans-serif; overflow: hidden; touch-action: none; user-select: none; }
+  main { position: absolute; inset: 0; display: grid; place-content: center; gap: .5rem;
+    text-align: center; pointer-events: none; }
+  h1 { margin: 0 0 .75rem; font-weight: 500; }
+  dl { display: grid; grid-template-columns: auto auto; gap: .35rem 1rem; margin: 0; text-align: left; }
+  dt { color: var(--muted); }
+  dd { margin: 0; font-variant-numeric: tabular-nums; }
+  p { color: var(--muted); margin-top: 1rem; }
+  .corner { position: absolute; padding: .75rem 1rem; color: var(--muted); border: 2px solid var(--muted); }
+  .tl { top: 0; left: 0; border-width: 2px 0 0 2px; }
+  .tr { top: 0; right: 0; border-width: 2px 2px 0 0; }
+  .bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
+  .br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+  .ring { position: absolute; width: 48px; height: 48px; margin: -26px 0 0 -26px; border-radius: 50%;
+    border: 2px solid var(--accent); pointer-events: none; animation: fade 1.2s ease-out forwards; }
+  @keyframes fade { to { opacity: 0; transform: scale(1.8); } }
+</style>
+</head>
+<body>
+<div class="corner tl">top left</div>
+<div class="corner tr">top right</div>
+<div class="corner bl">bottom left</div>
+<div class="corner br">bottom right</div>
+<main>
+  <h1>Byōbu panel test</h1>
+  <dl>
+    <dt>Viewport</dt><dd id="size"></dd>
+    <dt>GPU</dt><dd id="gpu"></dd>
+    <dt>Last touch</dt><dd id="touch">none yet</dd>
+  </dl>
+  <p>Landscape should read 1280×720. Tap each corner: the ring should appear under your finger.</p>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+
+  function showSize() {
+    $("size").textContent = `${innerWidth}×${innerHeight} at ${devicePixelRatio}x`;
+  }
+
+  function gpuRenderer() {
+    const gl = document.createElement("canvas").getContext("webgl");
+    if (!gl) return "no WebGL (software rendering?)";
+    const info = gl.getExtension("WEBGL_debug_renderer_info");
+    return gl.getParameter(info ? info.UNMASKED_RENDERER_WEBGL : gl.RENDERER);
+  }
+
+  addEventListener("resize", showSize);
+  addEventListener("pointerdown", (event) => {
+    const ring = document.createElement("div");
+    ring.className = "ring";
+    ring.style.left = `${event.clientX}px`;
+    ring.style.top = `${event.clientY}px`;
+    ring.addEventListener("animationend", () => ring.remove());
+    document.body.append(ring);
+    $("touch").textContent = `${event.pointerType} at ${Math.round(event.clientX)}, ${Math.round(event.clientY)}`;
+  });
+
+  showSize();
+  $("gpu").textContent = gpuRenderer();
+</script>
+</body>
+</html>
