@@ -1,12 +1,12 @@
 #!/bin/bash
-# Applies /boot/byobu.conf at boot: hostname, timezone, Wi-Fi, SSH key, panel rotation and
-# kiosk URL. The file is then renamed to byobu.conf.applied with the Wi-Fi password removed,
-# so secrets don't stay on the FAT partition. A bad value is skipped with a warning rather
-# than blocking the rest.
+# Applies /boot/byobu.conf at boot: hostname, timezone, Wi-Fi, SSH key, panel rotation, kiosk
+# URL and Home Assistant. The file is then renamed to byobu.conf.applied with the Wi-Fi
+# password and Home Assistant token removed, so secrets don't stay on the FAT partition. A bad
+# value is skipped with a warning rather than blocking the rest.
 set -euo pipefail
 
 CONF=/boot/byobu.conf
-KNOWN=" hostname timezone wifi_ssid wifi_password wifi_country ssh_key rotation url "
+KNOWN=" hostname timezone wifi_ssid wifi_password wifi_country ssh_key rotation url ha_url ha_token "
 
 warn() { echo "byobu.conf: $*" >&2; }
 
@@ -110,6 +110,20 @@ if [[ -n ${cfg[url]:-} ]]; then
   fi
 fi
 
-sed -E 's/^([[:space:]]*wifi_password[[:space:]]*=).*/\1 (removed after applying)/' "$CONF" > "$CONF.applied"
+# The dashboard reads where Home Assistant is from config.json. Only root and the kiosk user
+# can read it, as the token gives full control of the home.
+if [[ -n ${cfg[ha_url]:-}${cfg[ha_token]:-} ]]; then
+  url_pattern='^https?://[^[:space:]"\\]+$'
+  if [[ ! ${cfg[ha_url]:-} =~ $url_pattern ]]; then
+    warn "ha_url must be an http:// or https:// address, like http://homeassistant.local:8123"
+  elif [[ ! ${cfg[ha_token]:-} =~ ^[A-Za-z0-9._-]+$ ]]; then
+    warn "ha_token must be a long-lived access token, from the Security tab of your Home Assistant profile"
+  else
+    (umask 027; printf '{"hassUrl": "%s", "token": "%s"}\n' "${cfg[ha_url]%/}" "${cfg[ha_token]}" > /etc/byobu/config.json)
+    chgrp byobu /etc/byobu/config.json
+  fi
+fi
+
+sed -E 's/^([[:space:]]*(wifi_password|ha_token)[[:space:]]*=).*/\1 (removed after applying)/' "$CONF" > "$CONF.applied"
 rm "$CONF"
 echo "Applied byobu.conf"

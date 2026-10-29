@@ -1,0 +1,27 @@
+#!/bin/bash
+# Shows this machine's dashboard dev server on the panel, through an SSH tunnel so nothing
+# needs opening in the firewall. Saved edits appear on the panel straight away. Ctrl-C puts
+# the panel back on the page it was showing.
+#
+#   dev/panel 192.168.1.162
+set -euo pipefail
+
+PANEL=root@${1:?usage: dev/panel <panel address>}
+PORT=5173
+
+curl -sf -o /dev/null "http://localhost:$PORT/" \
+  || { echo "panel: start the dev server first (cd dashboard && pnpm dev)" >&2; exit 1; }
+
+previous=$(ssh "$PANEL" 'cat /etc/byobu/url 2>/dev/null' || true)
+restore() {
+  echo "Putting the panel back on ${previous:-the test page}"
+  # shellcheck disable=SC2029 # $previous is meant to expand here, before it's sent.
+  ssh "$PANEL" "printf '%s\n' '$previous' > /etc/byobu/url && systemctl restart byobu-kiosk"
+}
+trap restore EXIT
+
+echo "Panel is showing http://localhost:$PORT from this machine. Ctrl-C to stop."
+# The forward is in place before the remote command runs, so the kiosk never loads too early.
+# A terminal (-tt) makes the panel end the remote command when the connection drops.
+ssh -tt -o ExitOnForwardFailure=yes -o ServerAliveInterval=15 -R "$PORT:localhost:$PORT" "$PANEL" \
+  "echo http://localhost:$PORT > /etc/byobu/url && systemctl restart byobu-kiosk && exec sleep infinity"

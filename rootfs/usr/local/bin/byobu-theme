@@ -1,0 +1,14 @@
+#!/bin/bash
+# Turns an Omarchy colors.toml into the dashboard's theme.css: `bright_red = "#e82424"` becomes
+# `--bright-red: #e82424`, and `mode` becomes color-scheme. The dashboard's stylesheet maps
+# those onto its own colour roles. Also used by the dashboard's dev server.
+#
+#   byobu-theme < colors.toml > /etc/byobu/theme.css
+set -euo pipefail
+
+echo ":root {"
+sed -nE \
+  -e 's/^[[:space:]]*mode[[:space:]]*=[[:space:]]*"(dark|light)".*/  color-scheme: \1;/p' \
+  -e 's/^[[:space:]]*([a-z_]+)[[:space:]]*=[[:space:]]*"(#[0-9A-Fa-f]{3,8})".*/  --\1: \2;/p' |
+  sed -E ':a; s/^(  --[a-z-]*)_/\1-/; ta'
+echo "}"

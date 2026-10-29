@@ -27,6 +27,9 @@ for cmd in arch-chroot bsdtar curl gpg losetup mkfs.ext4 mkfs.vfat sfdisk; do
 done
 grep -q '^flags: .*F' /proc/sys/fs/binfmt_misc/qemu-aarch64 2>/dev/null \
   || die "qemu-aarch64 binfmt is not registered (pacman -S qemu-user-static-binfmt)"
+# Building the dashboard needs the user's own Node setup, so it isn't done here as root.
+[[ -f $ROOT_DIR/dashboard/dist/index.html ]] \
+  || die "build the dashboard first: (cd dashboard && pnpm install && pnpm build)"
 
 # The tarball and its signature are cached together. Delete cache/ to pick up a newer tarball.
 if [[ ! -f $TARBALL ]]; then
@@ -97,6 +100,14 @@ step "Copying rootfs overlay"
 for dir in "$ROOT_DIR"/rootfs/*/; do
   [[ $(basename "$dir") == boot ]] || cp -r --preserve=mode "$dir" "$MNT/"
 done
+
+step "Copying dashboard"
+cp -r "$ROOT_DIR/dashboard/dist/." "$MNT/usr/local/share/byobu/dashboard/"
+# The panel starts out in the colours of the Omarchy desktop that built it, if there is one.
+COLORS=$(getent passwd "${SUDO_USER:-root}" | cut -d: -f6)/.local/state/omarchy/current/theme/colors.toml
+if [[ -f $COLORS ]]; then
+  "$ROOT_DIR/rootfs/usr/local/bin/byobu-theme" < "$COLORS" > "$MNT/etc/byobu/theme.css"
+fi
 
 step "Installing packages (slow: this runs under qemu)"
 mkdir -p "$MNT/root/byobu-build"

@@ -7,6 +7,8 @@ cage
 chromium
 noto-fonts
 wlr-randr
+# Serves the dashboard to the kiosk
+darkhttpd
 
 # Networking
 iw

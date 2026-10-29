@@ -3,7 +3,8 @@
 [Unit]
 Description=Byōbu kiosk (cage + Chromium)
 After=systemd-user-sessions.service dbus.socket systemd-logind.service byobu-config.service
-Wants=dbus.socket systemd-logind.service
+After=byobu-dashboard.service
+Wants=dbus.socket systemd-logind.service byobu-dashboard.service
 Conflicts=getty@tty1.service
 After=getty@tty1.service
 

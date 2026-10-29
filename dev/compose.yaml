@@ -1,0 +1,20 @@
+# Home Assistant with the demo integration, for building the dashboard without a real home.
+# Bound to localhost: the panel reaches it through the dev server's proxy and an SSH tunnel.
+#
+#   docker compose -f dev/compose.yaml up -d && node dev/ha-setup.mjs
+#
+# Start over with a fresh Home Assistant: docker compose -f dev/compose.yaml down -v
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    ports:
+      - 127.0.0.1:8123:8123
+    volumes:
+      - config:/config
+      - ./configuration.yaml:/config/configuration.yaml:ro
+    environment:
+      TZ: Europe/London
+    restart: unless-stopped
+
+volumes:
+  config:

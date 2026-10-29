@@ -10,7 +10,7 @@ passwd -l root >/dev/null
 # The kiosk runs as an unprivileged user with no login shell.
 useradd -m -G video,render,input -s /usr/bin/nologin byobu
 
-systemctl enable byobu-config.service byobu-kiosk.service iwd.service sshd.service
+systemctl enable byobu-config.service byobu-dashboard.service byobu-kiosk.service iwd.service sshd.service
 systemctl set-default graphical.target
 
 # byobu-config does first-boot setup, so systemd-firstboot's console prompt would only hold up

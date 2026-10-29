@@ -1,6 +1,7 @@
 # Byōbu settings. Copy this file to byobu.conf on the boot partition and fill it in.
 # It's applied on the next boot, then renamed to byobu.conf.applied with the Wi-Fi
-# password removed. Drop in a new byobu.conf any time to change settings.
+# password and Home Assistant token removed. Drop in a new byobu.conf any time to change
+# settings; only the ones you fill in are changed.
 #
 # Format: key = value. Blank values are skipped. Quotes are optional.
 
@@ -19,5 +20,12 @@ ssh_key =
 # 90 or 270 makes it landscape, depending on which way up it's mounted.
 rotation = 270
 
-# Page the kiosk shows. Leave blank for the built-in touch test page.
+# Home Assistant for the dashboard. Create the token on your Home Assistant profile page,
+# under Security > Long-lived access tokens; a user just for the panel is a good idea.
+# Set both together.
+ha_url =
+ha_token =
+
+# Page the kiosk shows instead of the dashboard. Leave blank for the dashboard, or the
+# touch test page while Home Assistant isn't set up.
 url =

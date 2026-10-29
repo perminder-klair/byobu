@@ -2,3 +2,7 @@
 /out/
 # Local settings baked into dev images; holds Wi-Fi and SSH secrets.
 /byobu.conf
+# Dev Home Assistant login and access token, written by dev/ha-setup.mjs.
+/dev/ha-credentials.json
+node_modules/
+/dashboard/dist/

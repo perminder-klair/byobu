@@ -1,0 +1,4 @@
+default_config:
+
+# Lights, climate, covers, locks, media players, sensors and weather with fake state.
+demo:
