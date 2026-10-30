@@ -1,10 +1,10 @@
 // The thin bar along the top: faces as numbered workspaces, like Omarchy's own, then the time.
-import { mdiBrightness6, mdiCloudOffOutline, mdiViewGridOutline, mdiWeatherNight } from "@mdi/js";
+import { mdiBrightness6, mdiCloudOffOutline, mdiMicrophoneOutline, mdiViewGridOutline, mdiWeatherNight } from "@mdi/js";
 import { useClock } from "./clock";
 import type { Face } from "./faces";
 import { Icon } from "./Icon";
 import { usePower } from "./power";
-import { locale, problem, timers, useStore } from "./store";
+import { conversationOf, locale, problem, timers, useStore } from "./store";
 import { TimerBadge } from "./timers";
 
 type BarProps = {
@@ -21,6 +21,7 @@ export function Bar({ faces, current, onFace, onHome, onPanel }: BarProps) {
   const { night } = usePower();
   const clock = useClock(locale(store));
   const [next] = timers(store);
+  const micOpen = conversationOf(store)?.wake && store.snapshot?.microphone;
   return (
     <div className="bar">
       <div className="workspaces">
@@ -40,6 +41,7 @@ export function Bar({ faces, current, onFace, onHome, onPanel }: BarProps) {
       <div className="tray">
         {problem(store) && <Icon path={mdiCloudOffOutline} />}
         {night && <Icon path={mdiWeatherNight} />}
+        {micOpen && <Icon path={mdiMicrophoneOutline} />}
         <button aria-label="Panel settings" onClick={onPanel}>
           <Icon path={mdiBrightness6} />
         </button>

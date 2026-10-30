@@ -1,0 +1,50 @@
+#!/bin/bash
+# Fetches what the panel hears with: the wake phrase and speech libraries for its Python, and the
+# speech models. They're pinned and checked, and kept out of the repository for their size.
+#
+#   builder/fetch-voice <out dir>
+set -euo pipefail
+
+OUT=${1:?usage: builder/fetch-voice <out dir>}
+CACHE=${XDG_CACHE_HOME:-$HOME/.cache}/byobu/voice
+# Named after this script, so changing what's in here unpacks it all again.
+KIT=$CACHE/kit-$(sha256sum "$0" | cut -c1-12)
+PYPI=https://files.pythonhosted.org/packages
+MODELS=https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models
+
+fetch() {
+  local file=$CACHE/${2##*/}
+  if [[ ! -f $file ]]; then
+    echo "==> Fetching ${2##*/}" >&2
+    curl -fL --retry 3 --progress-bar -o "$file.part" "$2"
+    mv "$file.part" "$file"
+  fi
+  sha256sum --check --quiet <<<"$1  $file" >&2
+  echo "$file"
+}
+
+if [[ ! -f $KIT/done ]]; then
+  mkdir -p "$CACHE"
+  rm -rf "$KIT"
+  mkdir -p "$KIT/lib" "$KIT/parakeet"
+  wheels=(
+    "$(fetch 6c75b77c936efd19b8c35a094cb7e3fdbd4ebcd0f63635a0851ce591990829f2 "$PYPI/61/c2/764792cf610550c6e8dc06cc7ece77c0a3020054c029c907c2bbdda526f3/pymicro_wakeword-2.5.0-py3-none-manylinux_2_35_aarch64.whl")"
+    "$(fetch acead36386b42934e620f57d7481177ba461dde247cccef6a846f5831805e6c7 "$PYPI/cf/34/c52065f422c009d99c434fb68918142b815055942fcb57c9533810a22080/pymicro_features-2.0.2-cp39-abi3-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl")"
+    "$(fetch 4a855a5c89c89885111e4e9c570e5da1aed63373c031b757d8046792d95fe8fe "$PYPI/73/d0/399776c4b6fa0a618d23cf711d580607d9890f7838352dacb36a9246f2b7/sherpa_onnx_core-2.0.1-py3-none-manylinux2014_aarch64.whl")"
+    "$(fetch 3518c926609c2dea384cb0e032f5fc831c69528b7b5cff813487a9b917e9d0a7 "$PYPI/9f/60/aff6d97d6c2842eab369bf7b2a1eae7baed12d28c91b3c79d8b401b7bb9f/sherpa_onnx-2.0.1-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.whl")"
+  )
+  for wheel in "${wheels[@]}"; do
+    bsdtar -xf "$wheel" -C "$KIT/lib" --exclude '*.dist-info' --exclude 'bin' --exclude 'sherpa_onnx/include'
+  done
+  # Python picks the file for its own version, so the next one doesn't stop the panel hearing.
+  next=$(fetch 10e8c97afcfbeb99170618052d8e970f7ee4c103cba5a595c53e746a3faa6c5b "$PYPI/60/50/8cb3be3749a445e39c468c97bfbea403025985acb44bdc70ca30f5d5b9ac/sherpa_onnx-2.0.1-cp315-cp315-manylinux2014_aarch64.manylinux_2_17_aarch64.whl")
+  bsdtar -xf "$next" -C "$KIT/lib" 'sherpa_onnx/lib/_sherpa_onnx.cpython-315*'
+
+  parakeet=$(fetch 17f945007b52ccd8b7200ffc7c5652e9e8e961dfdf479cefcabd06cf5703630b "$MODELS/sherpa-onnx-nemo-parakeet_tdt_ctc_110m-en-36000-int8.tar.bz2")
+  tar -xjf "$parakeet" -C "$KIT/parakeet" --strip-components=2 --wildcards '*/model.int8.onnx' '*/tokens.txt'
+  cp "$(fetch 9e2449e1087496d8d4caba907f23e0bd3f78d91fa552479bb9c23ac09cbb1fd6 "$MODELS/silero_vad.onnx")" "$KIT/silero_vad.onnx"
+  touch "$KIT/done"
+fi
+
+mkdir -p "$OUT"
+cp -r "$KIT/lib" "$KIT/parakeet" "$KIT/silero_vad.onnx" "$OUT"

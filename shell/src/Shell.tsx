@@ -13,7 +13,7 @@ import { Nav } from "./nav";
 import { usePower, wake } from "./power";
 import { PanelControls } from "./settings";
 import { SheetFrame, ShowSheet, TileSheet, toneColour } from "./Sheet";
-import { act, activePlayer, alerts, findTile, onShow, problem, useStore, type Placed, type Tile } from "./store";
+import { act, activePlayer, alerts, conversationOf, findTile, onShow, problem, useStore, type Placed, type Tile } from "./store";
 
 import { loadTheme } from "./theme";
 
@@ -92,6 +92,14 @@ export function Shell() {
   useEffect(() => {
     if (alert) wake();
   }, [alert?.id]);
+
+  // Hearing the wake phrase is as good as a tap, and what's said next goes to the assistant.
+  const listening = conversationOf(store)?.listening;
+  useEffect(() => {
+    if (!listening) return;
+    wake();
+    setAsking(true);
+  }, [listening]);
 
   const closeSheet = useCallback(() => setSheet(undefined), []);
   const closePanelSheet = useCallback(() => setPanelSheet(false), []);

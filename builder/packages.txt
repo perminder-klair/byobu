@@ -22,6 +22,10 @@ shairport-sync
 spotifyd
 playerctl
 
+# Hearing the wake phrase and what's said after it
+python
+python-numpy
+
 # Networking
 avahi
 nss-mdns

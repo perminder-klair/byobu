@@ -24,8 +24,8 @@ Current target: Raspberry Pi 4 with the 7" Touch Display 2, rotated to landscape
    Now Playing, and timers with alerts that wake the screen.
 6. **Companion** (done). A phone app the panel serves, paired by QR code: remote, face editing and
    plugin settings, with nothing to install.
-7. **Assistant** (done). A prompt line and hold to talk, with Claude. Its tools are what the plugins
-   already publish, and its answers come back as live tiles.
+7. **Assistant** (done). A prompt line, hold to talk and a wake phrase, with Claude. Its tools are
+   what the plugins already publish, and its answers come back as live tiles.
 8. **Robustness** (done). A data partition for everything that changes, a read-only root, an update
    command that goes back by itself if a new version fails, and a theme that follows the desktop.
 
@@ -105,9 +105,21 @@ Opening a lock or a garage only ever gets you a Confirm button, however it's ask
 reads can open your door. A plugin marks these with `sensitive` on a button. What you ask and what it
 looks up to answer goes to Anthropic.
 
-To talk to it, plug in a microphone and set a speech server: anything with OpenAI's audio API,
-which includes Whisper servers you can run on your own network. Hold the microphone button to talk,
-and set a speaking model for spoken replies.
+To talk to it, plug in a microphone and hold the microphone button. The panel works out what you
+said by itself, in about a second. Or turn on a wake phrase in Settings and say "Hey Jarvis, turn
+off the kitchen lights": the screen wakes, anything playing turns down while you speak, and it stops
+listening when you stop talking. Hey Jarvis is the only choice for now, because the others we tried
+went off by mistake or missed too much. A custom phrase needs a model trained for it.
+
+A wake phrase keeps the microphone open, and a small microphone in the bar shows it is. Listening
+for the phrase happens on the panel and nothing leaves until it's heard. Then the words you say go
+to Anthropic, like anything you type, and anyone in the room can do it, though opening a lock still
+takes a press of Confirm. If it goes off by mistake and hears nothing after the phrase, it goes back
+to waiting without sending anything.
+
+A speech server is optional. Anything with OpenAI's audio API works, including Whisper servers you
+can run on your own network. It can make out words better than the panel can, and it's needed for
+spoken replies: set a speaking model too, or answers only show on the screen.
 
 ## Power cuts and updates
 
@@ -275,3 +287,7 @@ shell/      the shell, a web app
 byobud/     the service behind it, and the built-in plugins
 dev/        Home Assistant for development, the panel tunnel, and syncing a running panel
 ```
+
+Hearing uses [microWakeWord](https://github.com/OHF-Voice/micro-wake-word), [Silero VAD](https://github.com/snakers4/silero-vad),
+[sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), and NVIDIA's
+[Parakeet](https://huggingface.co/nvidia/parakeet-tdt_ctc-110m) model under CC BY 4.0.

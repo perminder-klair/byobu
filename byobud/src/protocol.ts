@@ -161,9 +161,11 @@ export type Turn = {
 export type Conversation = {
   busy: boolean;
   turns: Turn[];
-  // Whether a speech server is set up, and whether it's recording right now.
+  // Whether it can be spoken to, and whether it's taking something down right now.
   voice?: boolean;
   listening?: boolean;
+  // The phrase it's always listening for, if there is one, which means the microphone is open.
+  wake?: string;
 };
 
 // Everything a plugin can publish. Anything left out stays as it was.

@@ -1,8 +1,11 @@
 // The assistant end to end through the real SDK, against a stand-in for the Messages API that
 // plays back a script of responses, in the same streaming format.
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { after, before, test } from "node:test";
 import type { Host } from "../../src/plugin.ts";
 import type { Action, Conversation, PluginData, Snapshot, Tile } from "../../src/protocol.ts";
@@ -68,9 +71,28 @@ const door: Tile = {
   sheet: { sections: [{ type: "buttons", buttons: [{ icon: "", label: "Unlock", sensitive: true, action: { id: "unlock" } }] }] },
 };
 
-async function setUp(settings: object = {}) {
+// Stands in for listen.py: says these things when it starts and when told each word.
+const listener = (replies: Record<string, object[]>) => `
+import json, sys
+replies = json.loads(${JSON.stringify(JSON.stringify(replies))})
+def say(word):
+    for event in replies.get(word, []):
+        print(json.dumps(event), flush=True)
+say("start")
+for line in sys.stdin:
+    say(line.strip())
+`;
+
+async function setUp(settings: object = {}, { hears, playing }: { hears?: Record<string, object[]>; playing?: boolean } = {}) {
   script = [];
   requests = [];
+  const installed = mkdtempSync(join(tmpdir(), "assistant-"));
+  if (hears) {
+    mkdirSync(join(installed, "voice"));
+    writeFileSync(join(installed, "listen.py"), listener(hears));
+  }
+  let cues = 0;
+  const ducks: boolean[] = [];
   const performed: { plugin: string; action: Action; value?: unknown }[] = [];
   const shown: string[] = [];
   let conversation: Conversation = { busy: false, turns: [] };
@@ -82,15 +104,26 @@ async function setUp(settings: object = {}) {
     },
     status: (...args: unknown[]) => statuses.push(args),
     log: () => {},
-    world: () => ({ data: { ha: { tiles: { "light.a": lamp, "lock.a": door } } } }) as unknown as Snapshot,
+    installed,
+    directory: installed,
+    cue: () => cues++,
+    duck: (down: boolean) => ducks.push(down),
+    world: () => ({ data: { ha: { tiles: { "light.a": lamp, "lock.a": door }, players: playing ? { a: { state: "playing" } } : undefined } } }) as unknown as Snapshot,
     perform: async (plugin: string, action: Action, value?: unknown) => {
       performed.push({ plugin, action, value });
     },
     showFace: (face: string) => shown.push(face),
   } as unknown as Host;
   const instance = await plugin(host);
-  return { instance, performed, shown, statuses, conversation: () => conversation, answer: () => conversation.turns.at(-1) };
+  return { instance, performed, shown, statuses, ducks, cues: () => cues, conversation: () => conversation, answer: () => conversation.turns.at(-1) };
 }
+
+async function until(check: () => boolean) {
+  for (let i = 0; i < 300 && !check(); i++) await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.ok(check(), "timed out");
+}
+
+const JARVIS = { wake: "hey_jarvis", wakeEase: "normal" };
 
 const call = (id: string, name: string, input: object): Block => ({ type: "tool_use", id, name, input });
 const say = (text: string): Reply => ({ content: [{ type: "text", text }], stop_reason: "end_turn" });
@@ -199,4 +232,67 @@ test("nonsense from the model goes back as an error, not a crash", async () => {
 test("without a key it stays out of the way", async () => {
   const { statuses } = await setUp({ apiKey: "" });
   assert.deepEqual(statuses[0], ["off", "Needs an API key"]);
+});
+
+test("hearing the phrase takes down what's said and acts on it", async () => {
+  const { instance, performed, cues, conversation, answer } = await setUp(JARVIS, { hears: { start: [{ wake: true }], listen: [{ heard: "turn off the lamp" }] } });
+  script = [{ content: [call("t1", "control_device", { ref: "ha/light.a", control: "Toggle" })], stop_reason: "tool_use" }, say("Done.")];
+  await until(() => answer()?.text === "Done." && !conversation().listening);
+  assert.equal(cues(), 1);
+  assert.deepEqual(performed, [{ plugin: "ha", action: { id: "toggle" }, value: undefined }]);
+  assert.equal(conversation().turns[0].text, "turn off the lamp");
+  assert.equal(conversation().wake, "Hey Jarvis");
+  assert.equal(conversation().voice, true, "asking keeps the microphone button");
+  await instance.stop?.();
+});
+
+test("a false alarm that hears nothing goes back to waiting and sends nothing", async () => {
+  const { instance, conversation } = await setUp(JARVIS, { hears: { start: [{ wake: true }], listen: [{ nothing: true }] } });
+  await until(() => conversation().listening === false);
+  assert.equal(requests.length, 0);
+  await instance.stop?.();
+});
+
+test("the phrase means nothing while it's already listening", async () => {
+  const { instance, cues, conversation } = await setUp(JARVIS, { hears: { start: [{ wake: true }, { wake: true }, { wake: true }] } });
+  await until(() => conversation().listening === true);
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert.equal(cues(), 1);
+  await instance.stop?.();
+});
+
+test("what's playing turns down only while someone's speaking", async () => {
+  const { instance, ducks, answer, conversation } = await setUp(JARVIS, { playing: true, hears: { start: [{ wake: true }], listen: [{ heard: "what time is it" }] } });
+  script = [say("Noon.")];
+  await until(() => answer()?.text === "Noon." && !conversation().listening);
+  assert.deepEqual(ducks, [true, false]);
+  await instance.stop?.();
+});
+
+test("nothing playing means nothing to turn down", async () => {
+  const { instance, ducks, conversation } = await setUp(JARVIS, { hears: { start: [{ wake: true }], listen: [{ nothing: true }] } });
+  await until(() => conversation().listening === false);
+  assert.deepEqual(ducks, []);
+  await instance.stop?.();
+});
+
+test("hold to talk works with no speech server or wake phrase", async () => {
+  const { instance, answer, conversation, cues } = await setUp({ wake: "off" }, { hears: { release: [{ heard: "what time is it" }] } });
+  assert.equal(conversation().wake, undefined);
+  script = [say("Noon.")];
+  await instance.act?.("listen", undefined, undefined);
+  assert.equal(conversation().listening, true);
+  await instance.act?.("heard", undefined, undefined);
+  await until(() => answer()?.text === "Noon." && !conversation().listening);
+  assert.equal(cues(), 0, "the cue is for when you can't see the panel");
+  await instance.stop?.();
+});
+
+test("without the voice kit there's no wake phrase or microphone button", async () => {
+  const { instance, conversation } = await setUp(JARVIS);
+  assert.equal(conversation().voice, false);
+  assert.equal(conversation().wake, undefined);
+  await instance.act?.("listen", undefined, undefined);
+  assert.notEqual(conversation().listening, true);
+  await instance.stop?.();
 });

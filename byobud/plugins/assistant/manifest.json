@@ -3,7 +3,7 @@
   "id": "assistant",
   "name": "Assistant",
   "version": "1.0.0",
-  "description": "Ask byōbu to do things, with Claude. It can use anything the other plugins offer, but opening a lock or a garage always waits for you to press Confirm. What you ask, and what it looks up to answer, goes to Anthropic. With a microphone and a speech server, you can also hold to talk.",
+  "description": "Ask byōbu to do things, with Claude. It can use anything the other plugins offer, but opening a lock or a garage always waits for you to press Confirm. What you ask, and what it looks up to answer, goes to Anthropic. With a microphone you can also hold to talk, or just say the wake phrase.",
   "enabledByDefault": true,
   "schema": [
     {
@@ -35,10 +35,44 @@
       ]
     },
     {
+      "key": "wake",
+      "type": "select",
+      "label": "Wake phrase",
+      "description": "Say it, then what you want, without touching the panel. This keeps the microphone open, which a small microphone in the bar shows. Listening for the phrase happens on the panel, and nothing leaves it until the phrase is heard. Anyone in the room can do it, but opening a lock still takes a press of Confirm.",
+      "defaultValue": "off",
+      "options": [
+        {
+          "value": "off",
+          "label": "Off"
+        },
+        {
+          "value": "hey_jarvis",
+          "label": "Hey Jarvis"
+        }
+      ]
+    },
+    {
+      "key": "wakeEase",
+      "type": "select",
+      "label": "How easily it wakes",
+      "description": "Try More easily if it misses you, especially when you run straight on from the phrase. It'll go off by mistake a little more, like at the TV.",
+      "defaultValue": "normal",
+      "options": [
+        {
+          "value": "normal",
+          "label": "Normal"
+        },
+        {
+          "value": "easily",
+          "label": "More easily"
+        }
+      ]
+    },
+    {
       "key": "speechUrl",
       "type": "url",
       "label": "Speech server",
-      "description": "For talking to it: anything with OpenAI's audio API, like https://api.openai.com/v1 or a Whisper server on your own network. Leave empty to only type.",
+      "description": "Optional, as the panel works out what you say by itself. A server can do that better, and it's needed for spoken replies: anything with OpenAI's audio API, like https://api.openai.com/v1 or a Whisper server on your own network.",
       "defaultValue": ""
     },
     {

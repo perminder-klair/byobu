@@ -21,10 +21,15 @@ export type Host = {
   log: (...args: unknown[]) => void;
   // A folder of the plugin's own, for caches and config files.
   directory: string;
+  // Where the plugin itself is, for anything it came with.
+  installed: string;
   // Whatever the plugin last saved with store(), kept across restarts.
   stored: unknown;
   store: (value: unknown) => void;
   chime: () => void;
+  // A short sound to say it's listening, and turning everything down while someone speaks.
+  cue: () => void;
+  duck: (down: boolean) => void;
   // Everything every plugin has published, and a way to use it, for plugins that work across
   // the others, like the assistant.
   world: () => Snapshot;

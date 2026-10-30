@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { chimeWav, parseInputs, parseOutputs } from "./sound.ts";
+import { chimeWav, cueWav, parseInputs, parseOutputs } from "./sound.ts";
 
 const STATUS = `PipeWire 'pipewire-0' [1.6.10, byobu@byobu, cookie:1]
 Audio
@@ -44,4 +44,10 @@ test("the chime is a valid WAV that doesn't clip", () => {
   let peak = 0;
   for (let i = 44; i < wav.length; i += 2) peak = Math.max(peak, Math.abs(wav.readInt16LE(i)));
   assert.ok(peak > 8000 && peak < 32_000, `peak ${peak}`);
+});
+
+test("the cue is short enough to talk over", () => {
+  const wav = cueWav();
+  assert.equal(wav.toString("ascii", 0, 4), "RIFF");
+  assert.ok(wav.length < 44_100, "well under a second");
 });

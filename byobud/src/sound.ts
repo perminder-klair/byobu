@@ -17,10 +17,17 @@ const NOTES = [
   { frequency: 1320, at: 0.32 },
 ];
 const CHIME_SECONDS = 1;
+// Two quick notes, over before anyone's finished saying what they wanted.
+const CUE_NOTES = [
+  { frequency: 880, at: 0 },
+  { frequency: 1175, at: 0.08 },
+];
+const CUE_SECONDS = 0.3;
 
 export type Sound = {
   setVolume: (percent: number) => void;
   chime: () => void;
+  cue: () => void;
   devices: () => Promise<{ outputs: Output[]; microphone: boolean }>;
   select: (id: string) => Promise<void>;
 };
@@ -28,6 +35,7 @@ export type Sound = {
 export const silent: Sound = {
   setVolume: () => {},
   chime: () => {},
+  cue: () => {},
   devices: async () => ({ outputs: [], microphone: false }),
   select: async () => {},
 };
@@ -48,8 +56,8 @@ export const parseOutputs = (status: string) => listed(status, "Sinks:");
 export const parseInputs = (status: string) => listed(status, "Sources:");
 
 // A little WAV file, written out rather than kept in the repository as a binary.
-export function chimeWav(): Buffer {
-  const samples = Math.floor(SAMPLE_RATE * CHIME_SECONDS);
+function tones(notes: { frequency: number; at: number }[], seconds: number): Buffer {
+  const samples = Math.floor(SAMPLE_RATE * seconds);
   const wav = Buffer.alloc(44 + samples * 2);
   wav.write("RIFF", 0);
   wav.writeUInt32LE(36 + samples * 2, 4);
@@ -66,19 +74,24 @@ export function chimeWav(): Buffer {
   for (let i = 0; i < samples; i++) {
     const time = i / SAMPLE_RATE;
     let level = 0;
-    for (const { frequency, at } of NOTES) {
+    for (const { frequency, at } of notes) {
       if (time >= at) level += Math.sin(2 * Math.PI * frequency * (time - at)) * Math.exp(-6 * (time - at));
     }
-    wav.writeInt16LE(Math.round((level / NOTES.length) * 28_000), 44 + i * 2);
+    wav.writeInt16LE(Math.round((level / notes.length) * 28_000), 44 + i * 2);
   }
   return wav;
 }
 
+export const chimeWav = () => tones(NOTES, CHIME_SECONDS);
+export const cueWav = () => tones(CUE_NOTES, CUE_SECONDS);
+
 export function createSound(state: string): Sound {
   const directory = join(state, "sounds");
   const chimeFile = join(directory, "chime.wav");
+  const cueFile = join(directory, "cue.wav");
   mkdirSync(directory, { recursive: true });
   writeFileSync(chimeFile, chimeWav());
+  writeFileSync(cueFile, cueWav());
   const quietly = (error: unknown) => console.error("Sound:", error instanceof Error ? error.message : error);
   return {
     setVolume(percent) {
@@ -86,6 +99,9 @@ export function createSound(state: string): Sound {
     },
     chime() {
       spawn("pw-play", [chimeFile], { stdio: "ignore" }).on("error", quietly);
+    },
+    cue() {
+      spawn("pw-play", [cueFile], { stdio: "ignore" }).on("error", quietly);
     },
     async devices() {
       try {

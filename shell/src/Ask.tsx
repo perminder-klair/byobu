@@ -86,7 +86,14 @@ export function Ask({ onClose }: { onClose?: () => void }) {
   const onPhone = useContext(OnPhone);
   const conversation = conversationOf(store);
   const empty = (conversation?.turns.length ?? 0) === 0;
-  const [typing, setTyping] = useState(!onPhone && empty);
+  const [byVoice] = useState(conversation?.listening);
+  const [lastBefore] = useState(conversation?.turns.at(-1)?.id);
+  const [typing, setTyping] = useState(!onPhone && empty && !byVoice);
+  // The wake phrase opened this, and then nobody said anything.
+  const nothingCame = byVoice && conversation?.turns.at(-1)?.id === lastBefore && !conversation?.listening && !conversation?.busy;
+  useEffect(() => {
+    if (nothingCame) onClose?.();
+  }, [nothingCame, onClose]);
   if (!conversation) return null;
   const ask = (text: string) => act(conversation.plugin, { id: "ask" }, text);
   return (

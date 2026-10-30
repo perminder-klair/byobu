@@ -98,6 +98,7 @@ test("the volume is applied once there's something to apply it to", async () => 
   const core = new Core(join(root, "state"), {
     setVolume: (percent) => volumes.push(percent),
     chime: () => {},
+    cue: () => {},
     devices: async () => ({ outputs, microphone: false }),
     select: async () => {},
   });

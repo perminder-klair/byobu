@@ -11,6 +11,7 @@ import { silent, type Sound } from "./sound.ts";
 
 const KEYED = ["tiles", "players", "cameras", "timers", "alerts"] as const;
 const OUTPUTS_REFRESH_MS = 10_000;
+const DUCKED_VOLUME = 15;
 const ENTRY_NAMES = ["index.mjs", "index.js", "index.ts"];
 
 type Loaded = {
@@ -107,12 +108,15 @@ export class Core {
       log: (...args) => console.log(`[${id}]`, ...args),
       pictureUrl: (path) => `/api/pictures/${id}/${encodeURIComponent(path)}`,
       directory,
+      installed: plugin.directory,
       stored: plugin.record.stored,
       store: (value) => {
         plugin.record.stored = value;
         savePlugin(this.state, id, plugin.record);
       },
       chime: () => this.sound.chime(),
+      cue: () => this.sound.cue(),
+      duck: (down) => this.sound.setVolume(down ? Math.min(this.panel.volume, DUCKED_VOLUME) : this.panel.volume),
       world: () => this.snapshot(),
       perform: (plugin, { id: action, data }, value) => this.act(plugin, action, data, value),
       showFace: (face) => this.showFace(face),
