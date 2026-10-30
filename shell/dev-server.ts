@@ -1,8 +1,9 @@
-// Development only: serves the two files the dashboard loads at runtime. On a panel they come
-// from its settings instead of the build.
+// Development only: serves the files the shell loads at runtime. On a panel they come from its
+// settings instead of the build.
 //
-//   /config.json  the dev Home Assistant's token, from dev/ha-credentials.json
-//   /theme.css    this desktop's current Omarchy theme, pushed to open pages when it changes
+//   /config.json    the dev Home Assistant's token, from dev/ha-credentials.json
+//   /theme.css      this desktop's current Omarchy theme, pushed to open pages when it changes
+//   /wallpaper.jpg  this desktop's current wallpaper, likewise
 import { execFileSync } from "node:child_process";
 import { readFileSync, watch } from "node:fs";
 import { homedir } from "node:os";
@@ -39,6 +40,16 @@ export function byobuDevServer(): Plugin {
           res.end(execFileSync(byobuTheme, { input: readFileSync(join(OMARCHY_CURRENT, "theme/colors.toml")) }));
         } catch {
           res.end("/* No Omarchy theme on this machine: the built-in palette applies. */\n");
+        }
+      });
+
+      server.middlewares.use("/wallpaper.jpg", (_req, res) => {
+        res.setHeader("Cache-Control", "no-store");
+        try {
+          res.end(readFileSync(join(OMARCHY_CURRENT, "background")));
+        } catch {
+          res.statusCode = 404;
+          res.end();
         }
       });
 

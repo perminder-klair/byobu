@@ -36,6 +36,24 @@ type SliderProps = {
   gradient?: string;
 };
 
+// Stepping a number up and down. Taps in quick succession make one change rather than one each.
+export function useStepper(
+  value: number | undefined,
+  { min, max, step }: { min: number; max: number; step: number },
+  onChange: (value: number) => void,
+) {
+  const [shown, pick] = usePicked(value);
+  const send = useRef<number | undefined>(undefined);
+  const nudge = (direction: number) => {
+    if (shown == null) return;
+    const next = Number(Math.min(max, Math.max(min, shown + direction * step)).toFixed(1));
+    pick(next);
+    window.clearTimeout(send.current);
+    send.current = window.setTimeout(() => onChange(next), 600);
+  };
+  return [shown, nudge] as const;
+}
+
 export function Slider({ label, value, min, max, step = 1, format, onChange, gradient }: SliderProps) {
   const [shown, pick] = usePicked(value);
   const dragging = useRef(false);
@@ -53,7 +71,7 @@ export function Slider({ label, value, min, max, step = 1, format, onChange, gra
         {shown != null && format && <span>{format(shown)}</span>}
       </div>
       <div
-        className="track"
+        className="track-slider"
         style={{ "--at": shown == null ? 0 : (shown - min) / (max - min), background: gradient } as CSSProperties}
         onPointerDown={(event) => {
           event.currentTarget.setPointerCapture(event.pointerId);
@@ -118,11 +136,11 @@ export function ActionButton({ icon, label, selected, onClick }: ButtonProps) {
   );
 }
 
-// A round icon button. The label is for screen readers.
-export function RoundButton({ icon, label, selected, className, onClick }: ButtonProps) {
+// A square icon button. The label is for screen readers.
+export function IconButton({ icon, label, selected, className, onClick }: ButtonProps) {
   return (
     <button
-      className={className ? `round ${className}` : "round"}
+      className={className ? `icon-button ${className}` : "icon-button"}
       aria-label={label}
       data-selected={selected || undefined}
       onClick={onClick}

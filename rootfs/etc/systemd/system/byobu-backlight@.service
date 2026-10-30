@@ -1,0 +1,12 @@
+[Unit]
+Description=Byōbu backlight request
+
+[Service]
+User=byobu
+ExecStart=/usr/local/bin/byobu-backlight
+StandardInput=socket
+StandardOutput=socket
+StandardError=journal
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes

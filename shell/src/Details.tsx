@@ -21,24 +21,27 @@ import {
   mdiVolumeOff,
 } from "@mdi/js";
 import { createContext, useCallback, useEffect, useRef, type CSSProperties, type ReactNode } from "react";
-import { ActionButton, Choices, RoundButton, Slider, usePicked } from "./controls";
+import { ActionButton, Choices, IconButton, Slider, useStepper } from "./controls";
 import { ClimateFeature, CoverFeature, FanFeature, LightFeature, LockFeature, MediaFeature } from "./features";
 import { callAction, hassPicture, locale, stateLabel, supports, useHass, type HassEntity } from "./hass";
 
 // Opens the sheet for an entity, under the name its tile shows.
 export const ShowDetails = createContext<(entityId: string, name: string) => void>(() => {});
 
-// A sheet left open closes by itself, so the panel goes back to the dashboard.
+// A sheet left open closes by itself, so the panel goes back to what was under it.
 const IDLE_CLOSE_MS = 30_000;
 
 export type DetailsProps = { entity: HassEntity; name: string; room?: string; onClose: () => void };
 
-type SheetProps = DetailsProps & {
+type SheetLook = {
   tone: string;
   // An on/off button by the name, for things whose controls don't already say on or off.
   power?: { on: boolean; toggle: () => void };
   children?: ReactNode;
 };
+
+type SheetFrameProps = SheetLook & { title: string; subtitle: string; onClose: () => void };
+type SheetProps = DetailsProps & SheetLook;
 
 // "5 minutes ago", in Home Assistant's language.
 function since(time: string, language?: string): string {
@@ -50,8 +53,7 @@ function since(time: string, language?: string): string {
   return format.format(0, "second");
 }
 
-function Sheet({ entity, name, room, onClose, tone, power, children }: SheetProps) {
-  const { config } = useHass();
+export function SheetFrame({ title, subtitle, tone, power, onClose, children }: SheetFrameProps) {
   const idle = useRef<number | undefined>(undefined);
   const stillHere = useCallback(() => {
     window.clearTimeout(idle.current);
@@ -71,25 +73,30 @@ function Sheet({ entity, name, room, onClose, tone, power, children }: SheetProp
       <div className="sheet" style={{ "--tone": tone } as CSSProperties}>
         <div className="sheet-head">
           <div className="titles">
-            <div className="sheet-name">{name}</div>
-            <div className="sheet-state">
-              {[room, stateLabel(entity.state), since(entity.last_changed, locale(config))].filter(Boolean).join(" · ")}
-            </div>
+            <div className="sheet-name">{title}</div>
+            <div className="sheet-state">{subtitle}</div>
           </div>
           {power && (
-            <RoundButton
+            <IconButton
               icon={mdiPower}
               label={power.on ? "Turn off" : "Turn on"}
               selected={power.on}
               onClick={power.toggle}
             />
           )}
-          <RoundButton icon={mdiClose} label="Close" onClick={onClose} />
+          <IconButton icon={mdiClose} label="Close" onClick={onClose} />
         </div>
         <div className="sheet-body">{children}</div>
       </div>
     </div>
   );
+}
+
+function Sheet({ entity, name, room, ...look }: SheetProps) {
+  const { config } = useHass();
+  const when = since(entity.last_changed, locale(config));
+  const subtitle = [room, stateLabel(entity.state), when].filter(Boolean).join(" · ");
+  return <SheetFrame title={name} subtitle={subtitle} {...look} />;
 }
 
 const offOrPercent = (value: number) => (value === 0 ? "Off" : `${Math.round(value)}%`);
@@ -219,23 +226,15 @@ function FanDetails(props: DetailsProps) {
 
 type SetpointProps = { label: string; value: number; min: number; max: number; step: number; onChange: (value: number) => void };
 
-function Setpoint({ label, value, min, max, step, onChange }: SetpointProps) {
-  const [shown = value, pick] = usePicked(value);
-  const send = useRef<number | undefined>(undefined);
-  const nudge = (direction: number) => {
-    const next = Number(Math.min(max, Math.max(min, shown + direction * step)).toFixed(1));
-    pick(next);
-    // Taps in quick succession make one change rather than one each.
-    window.clearTimeout(send.current);
-    send.current = window.setTimeout(() => onChange(next), 600);
-  };
+function Setpoint({ label, value, onChange, ...limits }: SetpointProps) {
+  const [shown, nudge] = useStepper(value, limits, onChange);
   return (
     <div className="setpoint">
       <div className="label">{label}</div>
       <div className="setpoint-row">
-        <RoundButton icon={mdiMinus} label="Lower" onClick={() => nudge(-1)} />
+        <IconButton icon={mdiMinus} label="Lower" onClick={() => nudge(-1)} />
         <div className="setpoint-value">{shown}°</div>
-        <RoundButton icon={mdiPlus} label="Raise" onClick={() => nudge(1)} />
+        <IconButton icon={mdiPlus} label="Raise" onClick={() => nudge(1)} />
       </div>
     </div>
   );
@@ -433,14 +432,14 @@ function MediaDetails(props: DetailsProps) {
       {on && (
         <div className="transport">
           {can(MediaFeature.PREVIOUS_TRACK) && (
-            <RoundButton
+            <IconButton
               icon={mdiSkipPrevious}
               label="Previous"
               onClick={() => callAction(entity, "media_previous_track")}
             />
           )}
           {(can(MediaFeature.PAUSE) || can(MediaFeature.PLAY)) && (
-            <RoundButton
+            <IconButton
               className="play"
               icon={playing ? mdiPause : mdiPlay}
               label={playing ? "Pause" : "Play"}
@@ -449,7 +448,7 @@ function MediaDetails(props: DetailsProps) {
             />
           )}
           {can(MediaFeature.NEXT_TRACK) && (
-            <RoundButton icon={mdiSkipNext} label="Next" onClick={() => callAction(entity, "media_next_track")} />
+            <IconButton icon={mdiSkipNext} label="Next" onClick={() => callAction(entity, "media_next_track")} />
           )}
         </div>
       )}
@@ -464,7 +463,7 @@ function MediaDetails(props: DetailsProps) {
             onChange={(value) => callAction(entity, "volume_set", { volume_level: value / 100 })}
           />
           {can(MediaFeature.VOLUME_MUTE) && (
-            <RoundButton
+            <IconButton
               icon={is_volume_muted ? mdiVolumeOff : mdiVolumeHigh}
               label={is_volume_muted ? "Unmute" : "Mute"}
               selected={is_volume_muted}

@@ -5,4 +5,4 @@
 # Dev Home Assistant login and access token, written by dev/ha-setup.mjs.
 /dev/ha-credentials.json
 node_modules/
-/dashboard/dist/
+/shell/dist/

@@ -1,4 +1,4 @@
-// The supported_features bits the dashboard uses, from Home Assistant's *EntityFeature enums.
+// The supported_features bits the shell uses, from Home Assistant's *EntityFeature enums.
 
 export const ClimateFeature = { FAN_MODE: 8, PRESET_MODE: 16 };
 

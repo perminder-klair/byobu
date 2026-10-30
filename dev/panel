@@ -1,5 +1,5 @@
 #!/bin/bash
-# Shows this machine's dashboard dev server on the panel, through an SSH tunnel so nothing
+# Shows this machine's shell dev server on the panel, through an SSH tunnel so nothing
 # needs opening in the firewall. Saved edits appear on the panel straight away. Ctrl-C puts
 # the panel back on the page it was showing.
 #
@@ -10,7 +10,7 @@ PANEL=root@${1:?usage: dev/panel <panel address>}
 PORT=5173
 
 curl -sf -o /dev/null "http://localhost:$PORT/" \
-  || { echo "panel: start the dev server first (cd dashboard && pnpm dev)" >&2; exit 1; }
+  || { echo "panel: start the dev server first (cd shell && pnpm dev)" >&2; exit 1; }
 
 previous=$(ssh "$PANEL" 'cat /etc/byobu/url 2>/dev/null' || true)
 restore() {

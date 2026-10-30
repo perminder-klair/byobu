@@ -9,6 +9,8 @@ import {
   mdiLock,
   mdiLockOpenVariant,
   mdiMinus,
+  mdiPaletteOutline,
+  mdiPlayCircleOutline,
   mdiPlus,
   mdiPowerPlug,
   mdiPowerPlugOff,
@@ -18,7 +20,7 @@ import {
   mdiWindowShutterOpen,
 } from "@mdi/js";
 import { useContext, useRef, type CSSProperties, type ReactNode } from "react";
-import { RoundButton } from "./controls";
+import { IconButton } from "./controls";
 import { ShowDetails } from "./Details";
 import { CoverFeature, MediaFeature } from "./features";
 import { callAction, stateLabel, supports, type HassEntity } from "./hass";
@@ -150,8 +152,8 @@ function ClimateTile({ entity, name }: EntityProps) {
       {temperature != null && entity.state !== "off" && (
         // Pressing these is neither a tap on the tile nor the start of a long press.
         <div className="stepper" onPointerDown={stopPropagation} onClick={stopPropagation}>
-          <RoundButton icon={mdiMinus} label="Lower" onClick={() => nudge(-1)} />
-          <RoundButton icon={mdiPlus} label="Raise" onClick={() => nudge(1)} />
+          <IconButton icon={mdiMinus} label="Lower" onClick={() => nudge(-1)} />
+          <IconButton icon={mdiPlus} label="Raise" onClick={() => nudge(1)} />
         </div>
       )}
     </Tile>
@@ -216,6 +218,20 @@ function MediaTile({ entity, name }: EntityProps) {
   );
 }
 
+function SceneTile({ entity, name }: EntityProps) {
+  return (
+    <Tile
+      entity={entity}
+      name={name}
+      icon={entity.entity_id.startsWith("script.") ? mdiPlayCircleOutline : mdiPaletteOutline}
+      tone="var(--accent)"
+      active={false}
+      detail="Tap to run"
+      onTap={() => callAction(entity, "turn_on")}
+    />
+  );
+}
+
 const TILES: Record<string, (props: EntityProps) => ReactNode> = {
   light: LightTile,
   switch: SwitchTile,
@@ -224,6 +240,8 @@ const TILES: Record<string, (props: EntityProps) => ReactNode> = {
   cover: CoverTile,
   lock: LockTile,
   media_player: MediaTile,
+  scene: SceneTile,
+  script: SceneTile,
 };
 
 const stopPropagation = (event: { stopPropagation: () => void }) => event.stopPropagation();

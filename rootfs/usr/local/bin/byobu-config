@@ -110,7 +110,7 @@ if [[ -n ${cfg[url]:-} ]]; then
   fi
 fi
 
-# The dashboard reads where Home Assistant is from config.json. Only root and the kiosk user
+# The shell reads where Home Assistant is from config.json. Only root and the kiosk user
 # can read it, as the token gives full control of the home.
 if [[ -n ${cfg[ha_url]:-}${cfg[ha_token]:-} ]]; then
   url_pattern='^https?://[^[:space:]"\\]+$'

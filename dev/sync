@@ -1,6 +1,6 @@
 #!/bin/bash
-# Brings a running panel up to date with this checkout: packages, the rootfs overlay, the
-# dashboard build and this desktop's current Omarchy theme. Saves building and flashing an
+# Brings a running panel up to date with this checkout: packages, the rootfs overlay, the shell
+# build and this desktop's current Omarchy theme and wallpaper. Saves building and flashing an
 # image for most changes. Boot partition files (config.txt) still need a new image, and the
 # panel's own settings in /etc/byobu are left alone.
 #
@@ -10,26 +10,30 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 PANEL=root@${1:?usage: dev/sync <panel address>}
-DASHBOARD=/usr/local/share/byobu/dashboard
+SHELL_ROOT=/usr/local/share/byobu/shell
 
-echo "==> Building the dashboard"
-(cd dashboard && pnpm -s build --logLevel warn)
+echo "==> Building the shell"
+(cd shell && pnpm -s build --logLevel warn)
 
 echo "==> Installing packages"
 ssh "$PANEL" "pacman -S --needed --noconfirm $(grep -Ev '^(#|$)' builder/packages.txt | tr '\n' ' ')" 2>&1 |
   grep -vE '^(warning: .* is up to date -- skipping| there is nothing to do)$' || true
 
-echo "==> Copying the rootfs overlay and dashboard"
+echo "==> Copying the rootfs overlay and shell"
 tar -C rootfs -c --owner=root --group=root --exclude=./boot --exclude=./etc/byobu . |
-  ssh "$PANEL" "tar -C / -x --no-overwrite-dir && rm -rf $DASHBOARD/assets"
-tar -C dashboard/dist -c --owner=root --group=root . | ssh "$PANEL" "tar -C $DASHBOARD -x --no-overwrite-dir"
+  ssh "$PANEL" "tar -C / -x --no-overwrite-dir && rm -rf $SHELL_ROOT/assets"
+tar -C shell/dist -c --owner=root --group=root . | ssh "$PANEL" "tar -C $SHELL_ROOT -x --no-overwrite-dir"
 
-colors=~/.local/state/omarchy/current/theme/colors.toml
-if [[ -f $colors ]]; then
+omarchy=~/.local/state/omarchy/current
+if [[ -f $omarchy/theme/colors.toml ]]; then
   echo "==> Copying the current Omarchy theme"
-  rootfs/usr/local/bin/byobu-theme < "$colors" | ssh "$PANEL" "cat > /etc/byobu/theme.css"
+  rootfs/usr/local/bin/byobu-theme < "$omarchy/theme/colors.toml" | ssh "$PANEL" "cat > /etc/byobu/theme.css"
+  magick "$omarchy/background" -resize '1280x720^' -gravity center -extent 1280x720 -strip -quality 80 jpg:- |
+    ssh "$PANEL" "cat > /etc/byobu/wallpaper.jpg"
 fi
 
 echo "==> Restarting the kiosk"
 ssh "$PANEL" "systemctl daemon-reload && udevadm control --reload &&
-  systemctl enable --now byobu-dashboard.service && systemctl restart byobu-dashboard byobu-kiosk"
+  udevadm trigger --subsystem-match=backlight --action=add &&
+  systemctl enable --now byobu-backlight.socket byobu-shell.service &&
+  systemctl restart byobu-shell byobu-kiosk"

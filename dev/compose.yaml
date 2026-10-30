@@ -1,4 +1,4 @@
-# Home Assistant with the demo integration, for building the dashboard without a real home.
+# Home Assistant with the demo integration, for building the shell without a real home.
 # Bound to localhost: the panel reaches it through the dev server's proxy and an SSH tunnel.
 #
 #   docker compose -f dev/compose.yaml up -d && node dev/ha-setup.mjs

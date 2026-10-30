@@ -12,13 +12,25 @@ import {
   type HassEntities,
   type HassEntity,
 } from "home-assistant-js-websocket";
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 export type { HassConfig, HassEntity };
 
 export type Area = { area_id: string; name: string };
 
-// Where an entity lives and whether it's meant to be on a dashboard, from the registries.
+// An upcoming event from any calendar. All-day events have a date with no time.
+export type AgendaEvent = { calendar: string; start: string; end: string; summary: string; location?: string };
+
+// One step of a forecast, an hour or a day long.
+export type Forecast = {
+  datetime: string;
+  condition?: string;
+  temperature?: number;
+  templow?: number;
+  precipitation_probability?: number;
+};
+
+// Where an entity lives and whether it's meant to be shown, from the registries.
 export type Placement = { area?: string; hidden: boolean };
 
 export type Hass = {
@@ -29,6 +41,7 @@ export type Hass = {
   // Rooms in the order the user arranged them in Home Assistant. Unset until loaded.
   areas?: Area[];
   placements: Map<string, Placement>;
+  agenda: AgendaEvent[];
 };
 
 // The compact registry the Home Assistant frontend itself uses: entity id, device id, area id,
@@ -38,11 +51,14 @@ type Device = { id: string; area_id: string | null };
 
 const REGISTRY_EVENTS = ["area_registry_updated", "device_registry_updated", "entity_registry_updated"];
 
+const AGENDA_DAYS = 7;
+const AGENDA_REFRESH_MS = 10 * 60_000;
+
 // config.json, served next to the page. hassUrl defaults to the page's own origin, which is
 // how the dev server proxies Home Assistant.
 type PanelConfig = { hassUrl?: string; token: string };
 
-let hass: Hass = { status: "connecting", entities: {}, placements: new Map() };
+let hass: Hass = { status: "connecting", entities: {}, placements: new Map(), agenda: [] };
 let connection: Connection | undefined;
 let hassOrigin = location.origin;
 const listeners = new Set<() => void>();
@@ -79,12 +95,19 @@ export async function connect() {
   conn.addEventListener("ready", () => {
     update({ status: "connected" });
     reloadRegistries();
+    loadAgenda(conn);
   });
   conn.addEventListener("disconnected", () => update({ status: "reconnecting" }));
   subscribeConfig(conn, (config) => update({ config }));
-  subscribeEntities(conn, (entities) => update({ status: "connected", entities }));
+  // The calendars are known once the first states arrive, so the agenda loads from there.
+  subscribeEntities(conn, (entities) => {
+    const first = Object.keys(hass.entities).length === 0;
+    update({ status: "connected", entities });
+    if (first) loadAgenda(conn);
+  });
   for (const event of REGISTRY_EVENTS) conn.subscribeEvents(reloadRegistries, event);
   loadRegistries(conn);
+  setInterval(() => loadAgenda(conn), AGENDA_REFRESH_MS);
 }
 
 async function loadRegistries(conn: Connection) {
@@ -111,6 +134,29 @@ async function loadRegistries(conn: Connection) {
   }
 }
 
+async function loadAgenda(conn: Connection) {
+  const calendars = Object.keys(hass.entities).filter((id) => id.startsWith("calendar."));
+  if (calendars.length === 0) return;
+  const now = new Date();
+  const end = new Date(now.getTime() + AGENDA_DAYS * 24 * 3600_000);
+  try {
+    const { response } = (await callService(
+      conn,
+      "calendar",
+      "get_events",
+      { start_date_time: now.toISOString(), end_date_time: end.toISOString() },
+      { entity_id: calendars },
+      true,
+    )) as { response: Record<string, { events: Omit<AgendaEvent, "calendar">[] }> };
+    const agenda = Object.entries(response)
+      .flatMap(([calendar, { events }]) => events.map((event) => ({ ...event, calendar })))
+      .sort((a, b) => Date.parse(a.start) - Date.parse(b.start));
+    update({ agenda });
+  } catch (error) {
+    console.error("Loading the agenda failed", error);
+  }
+}
+
 export function useHass(): Hass {
   return useSyncExternalStore(
     (listener) => {
@@ -119,6 +165,24 @@ export function useHass(): Hass {
     },
     () => hass,
   );
+}
+
+// A live forecast. Home Assistant only sends these to subscribers, so nothing is fetched while
+// no screen shows one.
+export function useForecast(entityId: string | undefined, forecastType: "hourly" | "daily"): Forecast[] {
+  const [forecast, setForecast] = useState<Forecast[]>([]);
+  useEffect(() => {
+    if (!entityId || !connection) return;
+    const subscription = connection.subscribeMessage<{ forecast: Forecast[] | null }>(
+      (message) => setForecast(message.forecast ?? []),
+      { type: "weather/subscribe_forecast", entity_id: entityId, forecast_type: forecastType },
+    );
+    subscription.catch((error) => console.error(`Forecast for ${entityId} failed`, error));
+    return () => {
+      subscription.then((unsubscribe) => unsubscribe()).catch(() => {});
+    };
+  }, [entityId, forecastType]);
+  return forecast;
 }
 
 export function callAction(entity: HassEntity, service: string, data?: object) {

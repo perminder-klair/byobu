@@ -3,7 +3,7 @@
 
 rotation=$(cat /etc/byobu/rotation 2>/dev/null)
 url=$(cat /etc/byobu/url 2>/dev/null)
-# Once Home Assistant is set up, the dashboard is the default page; until then, the touch test.
+# Once Home Assistant is set up, the shell is the default page; until then, the touch test.
 if [[ -z $url ]]; then
   if [[ -f /etc/byobu/config.json ]]; then
     url=http://localhost:8080/
@@ -32,6 +32,7 @@ exec chromium \
   --disable-session-crashed-bubble \
   --disable-features=TranslateUI \
   --disable-pinch \
+  --disable-lcd-text \
   --overscroll-history-navigation=0 \
   --password-store=basic \
   "$url"

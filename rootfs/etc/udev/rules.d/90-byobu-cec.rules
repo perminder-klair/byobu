@@ -1,3 +1,3 @@
 # The HDMI CEC remote-control inputs advertise pointer axes, so cage thinks a mouse is plugged in
-# and draws a cursor over the dashboard. Nothing uses CEC on a DSI panel; a real mouse still works.
+# and draws a cursor over the shell. Nothing uses CEC on a DSI panel; a real mouse still works.
 SUBSYSTEM=="input", KERNEL=="event*", ATTRS{name}=="vc4-hdmi-[0-9]", ENV{LIBINPUT_IGNORE_DEVICE}="1"

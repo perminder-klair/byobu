@@ -3,8 +3,8 @@
 [Unit]
 Description=Byōbu kiosk (cage + Chromium)
 After=systemd-user-sessions.service dbus.socket systemd-logind.service byobu-config.service
-After=byobu-dashboard.service
-Wants=dbus.socket systemd-logind.service byobu-dashboard.service
+After=byobu-shell.service
+Wants=dbus.socket systemd-logind.service byobu-shell.service
 Conflicts=getty@tty1.service
 After=getty@tty1.service
 
@@ -23,6 +23,8 @@ UtmpMode=user
 ExecStart=/usr/bin/cage -- /usr/local/bin/byobu-session
 Restart=always
 RestartSec=2
+# cage can hang if it's stopped while still starting. It has nothing to save, so don't wait.
+TimeoutStopSec=5
 
 [Install]
 WantedBy=graphical.target
