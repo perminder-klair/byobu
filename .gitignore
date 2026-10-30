@@ -11,3 +11,6 @@ node_modules/
 /dev/state/
 /byobud/dist/
 /release/
+/site/.next/
+/site/next-env.d.ts
+/site/*.tsbuildinfo

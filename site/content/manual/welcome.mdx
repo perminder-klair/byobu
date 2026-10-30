@@ -1,0 +1,29 @@
+Byōbu is a wall display OS for a Raspberry Pi with a touchscreen: faces for the room, a home screen for your hand, in the look of Omarchy. Everything it shows comes from plugins. Home Assistant is one, and it works without it.
+
+It's Arch Linux ARM with [cage](https://github.com/cage-kiosk/cage) running Chromium in kiosk mode. Omarchy's desktop stack doesn't run here, but its themes do.
+
+A byōbu is a Japanese folding screen: painted panels, hinged together, that stand in a room. This one hangs on a wall.
+
+<Shot name="modular" title="modular" number={1} focused alt="The Modular face: the heating at 20.5 degrees, the time, the next event, and tiles counting lights, locks and blinds." />
+
+## What you need
+
+- A Raspberry Pi 4
+- The 7" Touch Display 2, rotated to landscape
+- An SD card of more than 6 GB, as the rest of the card becomes a data partition
+- Wi-Fi or Ethernet
+- An Arch Linux machine to build the image on
+
+A speaker on the 3.5 mm jack or USB gives you sound and timers you can hear, and a USB microphone lets you talk to the [assistant](/manual/assistant/). Neither is required.
+
+## How far along it is
+
+<Note title="where it's up to">
+
+Byōbu is early. There's no download yet, so you [build the image yourself](/manual/getting-started/), and it has only run on one panel so far. AirPlay, Spotify, voice, the assistant and pairing a phone have been tried with stand-ins rather than the real things, and recent changes to the image builder have only been tried on a running panel, not a freshly flashed one.
+
+</Note>
+
+## Finding your way around
+
+[Start](/manual/getting-started/) takes you from nothing to a working panel. [Using it](/manual/faces/) is what the screen does once it's on the wall. [Connecting things](/manual/home-assistant/) adds your home, your calendar and the assistant. [Looking after it](/manual/power-and-updates/) covers updates and what to do when something's wrong, and [Building on it](/manual/writing-a-plugin/) is for writing plugins and working on Byōbu itself.

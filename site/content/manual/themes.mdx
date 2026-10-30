@@ -1,0 +1,23 @@
+Byōbu uses Omarchy's themes as they are. Colours and the wallpaper come from the theme, and every part of the shell is drawn from them, so a plugin can't look out of place.
+
+## Choosing one
+
+Open Settings, then Theme, or use the Panel tab on [your phone](/manual/your-phone/). As set up is the theme the panel was built with. The rest are the themes of the desktop that built it.
+
+Night mode replaces the theme while it's on. [Idle, dim and night](/manual/idle-and-night/) has more.
+
+## Following your desktop
+
+On an Omarchy desktop, this pairs the desktop with the panel and adds a hook, so changing theme there changes the panel too, wallpaper included:
+
+```sh
+dev/follow-theme <panel address>
+```
+
+It shows up in Settings as From my desktop. If the panel is off it catches up at the next change.
+
+To stop, delete `~/.config/omarchy/hooks/theme-set.d/byobu`, and remove the desktop in Settings, under Phones.
+
+## Making one
+
+Anything with an Omarchy `colors.toml` works, as `byobu-theme` turns it into the panel's stylesheet. `bright_red = "#e82424"` becomes `--bright-red: #e82424`, and the shell derives its windows, borders and dimmer text from those.

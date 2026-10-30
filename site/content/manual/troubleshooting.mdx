@@ -1,0 +1,49 @@
+## Start with the logs
+
+SSH in as root and look at the journal:
+
+```sh
+journalctl -b -u byobu-config -u byobud -u byobu-kiosk
+```
+
+## The screen
+
+| What you see | What to try |
+| --- | --- |
+| No image at all | Check the DSI ribbon, then `display_auto_detect` in `config.txt` |
+| Wrong way round | Set `rotation` in `byobu.conf`. See [First boot checks](/manual/first-boot/) |
+| Touches land in the wrong place | Swap the 90 and 270 matrices in `/usr/local/lib/byobu/touch-matrix` |
+| Slow, or the GPU isn't V3D | Use the [test page](/manual/first-boot/) to see the renderer |
+| Everything's red | That's [night mode](/manual/idle-and-night/) |
+
+## "Reconnecting to byobud…"
+
+The shell has lost the service behind it. It reconnects by itself, and byobud restarts by itself if it stops. If it stays, check the journal and restart it:
+
+```sh
+systemctl restart byobud
+```
+
+## A plugin's problem
+
+A plugin's error shows on the panel, and under that plugin in Settings. Changing its settings restarts it, which is a quick way to try again.
+
+## A setting didn't apply
+
+`byobu.conf` is applied at boot, then renamed to `byobu.conf.applied`, with anything it couldn't use warned about in the journal under `byobu-config`.
+
+## Wi-Fi
+
+Check `wifi_ssid` and `wifi_password`, and set `wifi_country` if your channels aren't showing up. Wi-Fi is handled by iwd, and its saved networks are in `/var/lib/iwd`.
+
+## Starting a setting over
+
+Settings live in `/var/lib/byobu`: `panel.json` has the panel's own, `plugins/` one file per plugin, and `clients.json` the paired phones. Stop byobud before changing them by hand.
+
+## A bad update
+
+`byobu-update` goes back by itself if a new version doesn't come up. To go back by hand, point `/data/app/current` at an older version and restart byobud. See [Power cuts and updates](/manual/power-and-updates/).
+
+## Asking for help
+
+Open an [issue](https://github.com/perminder-klair/byobu/issues) with what you did, what you expected and what the journal says. Take tokens out first.

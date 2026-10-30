@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "fixture",
+  "name": "Fixture home",
+  "version": "1.0.0",
+  "description": "A made-up home for the website's screenshots.",
+  "enabledByDefault": true
+}

@@ -1,0 +1,42 @@
+Add an Anthropic API key in Settings, under Assistant, and a prompt appears on the home screen, with an Ask tab on [your phone](/manual/your-phone/). Ask it to turn things off, set a timer, or what the weather's doing.
+
+<Shot name="ask" title="ask byōbu" number={1} focused alt="The assistant saying the kitchen lights are off, above the tile for those lights." />
+
+It can use anything other plugins offer without being taught, and the tile it changed shows under its answer.
+
+<Note>
+
+The assistant has been tried against a stand-in for the API, not the real thing. The answers in these pictures are scripted, though the tiles and buttons are what the plugin does.
+
+</Note>
+
+## What it can do
+
+- Find and control anything with a tile
+- Look up the weather, your calendar, what's playing and running timers
+- Start a timer
+- Show a face on the panel
+
+It keeps the last few exchanges, and forgets the conversation after five minutes, as a wall hears from different people.
+
+## Locks and garages
+
+Opening a lock or a garage only ever gets you a Confirm button, however it's asked, so nothing it reads can open your door. A Confirm works once.
+
+<Shot name="ask-confirm" title="confirm" number={2} alt="The assistant saying the front door needs a person, above the door's tile and a Confirm button." />
+
+A plugin marks these with `sensitive` on a button. [Writing a plugin](/manual/writing-a-plugin/) has more.
+
+## Choosing a model
+
+| Model | Good for |
+| --- | --- |
+| Opus | The default |
+| Sonnet | Between the two |
+| Haiku | Simple commands, for far less |
+
+## What it costs, and what leaves the panel
+
+Using it is billed to your API key. What you ask, and what it looks up to answer, goes to Anthropic. That can include your device names, calendar entries and what's playing.
+
+Everything it reads is treated as information rather than instructions, as a device name or a calendar entry can be written by anyone.

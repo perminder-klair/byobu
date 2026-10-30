@@ -1,0 +1,60 @@
+The shell (`shell/`) is a React app that draws what byobud (`byobud/`) sends it. Develop both on your desktop against a Home Assistant in Docker with the demo integration's fake lights, thermostats, locks and media players.
+
+## Running it
+
+```sh
+docker compose -f dev/compose.yaml up -d
+node dev/ha-setup.mjs            # onboards it and points byobud at it
+cd byobud && pnpm install && pnpm dev
+cd shell && pnpm install && pnpm dev
+```
+
+Open http://localhost:5173 at 1280×720, the panel's size, and `/phone` for the phone app. The colours and wallpaper come from your desktop's current Omarchy theme and change with it. Swiping needs a touchscreen or a trackpad. With a mouse, use the bar and the wheel.
+
+Home Assistant's own UI is at http://localhost:8123, with the login in `dev/ha-credentials.json`. `docker compose -f dev/compose.yaml down -v` starts it over.
+
+## Checking your work
+
+```sh
+cd byobud
+pnpm test                                                   # everything
+node --test src/core.test.ts                                # one file
+node --test --test-name-pattern="pair" src/clients.test.ts  # one test by name
+pnpm typecheck
+```
+
+The shell has `pnpm typecheck` too, and no tests. There's no linter or formatter. Hearing needs a build, so the assistant has no microphone under `pnpm dev`.
+
+## Trying it on the panel
+
+`dev/panel` tunnels the dev server to the panel over SSH and points the kiosk at it, so saved changes show up there straight away. Ctrl-C puts the panel back. Nothing listens on the network, so your firewall can stay as it is.
+
+```sh
+dev/panel <panel address>
+```
+
+<Note>
+
+This writes to `/etc/byobu`, which is on the read-only root on a panel past its first boot. Run `mount -o remount,rw /` on the panel first.
+
+</Note>
+
+`dev/sync` brings a running panel up to date with your checkout instead of flashing a new image: packages, everything in `rootfs/` except the boot partition, the shell and byobud builds, and your desktop's themes. Settings on the panel are left alone, and any release installed with `byobu-update` is set aside so the checkout's build runs.
+
+```sh
+dev/sync <panel address>
+```
+
+## How it fits together
+
+On the panel, byobud serves the shell and its API on port 8080. Plugins run inside it, so the browser never holds a token. It sends a snapshot on connecting, then only what changed. Settings live in `/var/lib/byobu`, and byobud also sets the backlight, which a page can't do.
+
+## Keeping it smooth
+
+A Pi has about 16 ms a frame and the main thread can't do much in it, which decides how the shell moves. Swipes are native scrolling with snap points, and the far and near views animate windows with transforms only, so both run on the GPU.
+
+When measuring, count compositor frames from a trace rather than `requestAnimationFrame`, and use input at a true 60 Hz, as Chromium only draws a drag as often as the finger reports.
+
+## This website
+
+The site is in `site/`, a Next.js app with the manual as MDX in `content/manual/`. Its screenshots are the real shell, taken by `pnpm capture` with a made-up home. Run that when the shell changes.

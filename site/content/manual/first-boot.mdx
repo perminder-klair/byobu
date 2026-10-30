@@ -1,0 +1,32 @@
+This is worth doing once on new hardware. Set `url` in `byobu.conf` to the built-in test page, which shows the viewport size and the GPU renderer, and draws a ring wherever you touch:
+
+```ini
+url = file:///usr/local/share/byobu/test/index.html
+```
+
+## The checklist
+
+- [ ] The panel lights up with the test page
+- [ ] The viewport reads 1280×720
+- [ ] It's the right way up
+- [ ] Rings land under your finger in all four corners
+- [ ] The GPU shows V3D, not SwiftShader or llvmpipe
+- [ ] Wi-Fi connects and SSH works with your key
+- [ ] Pull the power, boot again, and there's no "restore pages" bubble
+
+## If one fails
+
+| What you see | What to do |
+| --- | --- |
+| No image at all | Check the DSI ribbon, then `display_auto_detect` in `config.txt` |
+| Viewport reads 720×1280 | Rotation didn't apply. Check `rotation` in `byobu.conf` |
+| Upside down | Set `rotation = 90` instead of `270` |
+| Touches are mirrored | Swap the 90 and 270 matrices in `/usr/local/lib/byobu/touch-matrix` |
+
+When you're done, set `url = http://localhost:8080/` to go back to the shell, as a blank `url` leaves the test page in place.
+
+Logs for all of this are in the journal:
+
+```sh
+journalctl -b -u byobu-config -u byobud -u byobu-kiosk
+```

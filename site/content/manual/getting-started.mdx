@@ -1,0 +1,42 @@
+There's no ready-made image yet, so the first step is building one. It takes a while the first time, and after that you can [update a running panel](/manual/power-and-updates/) without flashing again.
+
+## Build an image
+
+You'll need an Arch Linux machine, Node, [pnpm](https://pnpm.io) and a checkout of the [source](https://github.com/perminder-klair/byobu).
+
+```sh
+sudo pacman -S --needed arch-install-scripts qemu-user-static-binfmt dosfstools e2fsprogs imagemagick
+(cd shell && pnpm install && pnpm build)
+(cd byobud && pnpm install && pnpm build)
+sudo builder/build.sh            # writes out/byobu-YYYYMMDD.img
+```
+
+The first build downloads the 850 MB or so Arch Linux ARM tarball into `cache/` and checks its signature. Packages install under qemu, so expect it to be slow. Building byobud also fetches the wake phrase and speech models, which are pinned and checked. Delete `cache/` to pick up a newer tarball.
+
+The panel starts out in the Omarchy theme and wallpaper the building desktop has on, with that desktop's other themes to choose from in Settings.
+
+## Flash it
+
+```sh
+sudo dd if=out/byobu-YYYYMMDD.img of=/dev/sdX bs=4M conv=fsync status=progress
+```
+
+Check `/dev/sdX` really is your SD card first, as this overwrites whatever's there.
+
+## Fill in the settings
+
+The card has a small boot partition called `BYOBU`, which any computer can read. Copy `byobu.conf.example` to `byobu.conf` there and fill in your Wi-Fi, SSH key and, if you use it, Home Assistant. [The settings file](/manual/settings-file/) goes through every line.
+
+If you're building more than one, put a filled-in `byobu.conf` in the root of your checkout. It's ignored by git, and the builder copies it into the image.
+
+## Boot it
+
+Put the card in the Pi and power it on. The first boot takes a minute or two longer than the rest, as it makes a data partition from the rest of the card and moves everything that changes onto it.
+
+The panel joins your network as `byobu.local`, or whatever hostname you set. Access is SSH as root, by key only:
+
+```sh
+ssh root@byobu.local
+```
+
+New hardware is worth checking once. [First boot checks](/manual/first-boot/) has a list.

@@ -1,0 +1,40 @@
+Byōbu is built for a home network you trust. Don't forward the panel's port to the internet.
+
+## Who can reach it
+
+The shell's files are the same for everyone and hold nothing private. Its API, which is everything else, answers the panel's own browser, on localhost, and paired devices. Anything else is refused, apart from asking to pair, and that needs a code.
+
+| Way in | How |
+| --- | --- |
+| The panel's own screen | Anyone standing in front of it |
+| A phone | A code from the panel, which works once, for five minutes |
+| SSH | As root, with the key in `byobu.conf`. Passwords are off |
+
+Pairing is limited to ten attempts a minute. Phones stay paired until you remove them in Settings, and only hashes of their tokens are kept, in `/var/lib/byobu/clients.json`.
+
+## What travels in the clear
+
+The panel speaks plain HTTP, so a phone's token is only as private as your Wi-Fi. Anyone already on your network who's watching the traffic could read what a phone sends, including a token typed into Settings.
+
+## Secrets
+
+Plugins run inside byobud, so the browser never holds a token. A `secret` setting is never sent to any client, and Settings only shows that it's set. Plugin settings live in `/var/lib/byobu/plugins`, readable only by byobud's user, and the Wi-Fi password and Home Assistant token are removed from the boot partition once applied.
+
+## The kiosk
+
+The kiosk runs as an unprivileged user with no login shell, and byobud runs sandboxed, without access to `/home` or `/root`.
+
+## Plugins
+
+A plugin runs inside byobud with its full access to your settings and network. Only install ones you trust.
+
+## What leaves the panel
+
+| What | Where it goes |
+| --- | --- |
+| What you ask the assistant, and what it looks up | Anthropic |
+| Your words, if you use a speech server | That server |
+| Your location, with Open-Meteo | open-meteo.com |
+| Your calendar link | Whoever hosts your calendar |
+
+Listening for the wake phrase happens on the panel. See [Voice](/manual/voice/).

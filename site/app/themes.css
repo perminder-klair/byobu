@@ -1,0 +1,297 @@
+/* Written by scripts/themes.mjs from Omarchy's themes. */
+[data-theme="catppuccin"] {
+  color-scheme: dark;
+  --background: #1e1e2e;
+  --foreground: #cdd6f4;
+  --accent: #89b4fa;
+  --red: #f38ba8;
+  --yellow: #f9e2af;
+  --green: #a6e3a1;
+  --cyan: #94e2d5;
+  --blue: #89b4fa;
+  --magenta: #f5c2e7;
+  --orange: #f6b6ab;
+}
+[data-theme="catppuccin-latte"] {
+  color-scheme: light;
+  --background: #eff1f5;
+  --foreground: #4c4f69;
+  --accent: #1e66f5;
+  --red: #d20f39;
+  --yellow: #df8e1d;
+  --green: #40a02b;
+  --cyan: #179299;
+  --blue: #1e66f5;
+  --magenta: #ea76cb;
+  --orange: #d84e2b;
+}
+[data-theme="ethereal"] {
+  color-scheme: dark;
+  --background: #060B1E;
+  --foreground: #ffcead;
+  --accent: #7d82d9;
+  --red: #ED5B5A;
+  --yellow: #E9BB4F;
+  --green: #92a593;
+  --cyan: #a3bfd1;
+  --blue: #7d82d9;
+  --magenta: #c89dc1;
+  --orange: #eb8b54;
+}
+[data-theme="everforest"] {
+  color-scheme: dark;
+  --background: #2d353b;
+  --foreground: #d3c6aa;
+  --accent: #7fbbb3;
+  --red: #e67e80;
+  --yellow: #dbbc7f;
+  --green: #a7c080;
+  --cyan: #83c092;
+  --blue: #7fbbb3;
+  --magenta: #d699b6;
+  --orange: #e09d7f;
+}
+[data-theme="flexoki-light"] {
+  color-scheme: light;
+  --background: #FFFCF0;
+  --foreground: #100F0F;
+  --accent: #205EA6;
+  --red: #D14D41;
+  --yellow: #D0A215;
+  --green: #879A39;
+  --cyan: #3AA99F;
+  --blue: #205EA6;
+  --magenta: #CE5D97;
+  --orange: #d0772b;
+}
+[data-theme="gruvbox"] {
+  color-scheme: dark;
+  --background: #282828;
+  --foreground: #d4be98;
+  --accent: #7daea3;
+  --red: #ea6962;
+  --yellow: #d8a657;
+  --green: #a9b665;
+  --cyan: #89b482;
+  --blue: #7daea3;
+  --magenta: #d3869b;
+  --orange: #e1875c;
+}
+[data-theme="hackerman"] {
+  color-scheme: dark;
+  --background: #0B0C16;
+  --foreground: #ddf7ff;
+  --accent: #82FB9C;
+  --red: #50f872;
+  --yellow: #50f7d4;
+  --green: #4fe88f;
+  --cyan: #7cf8f7;
+  --blue: #829dd4;
+  --magenta: #86a7df;
+  --orange: #50f7a3;
+}
+[data-theme="jade-horse"] {
+  color-scheme: dark;
+  --background: #142620;
+  --foreground: #dfede5;
+  --accent: #8bcbb1;
+  --red: #d88d91;
+  --yellow: #c5cc91;
+  --green: #8bcbb1;
+  --cyan: #86c7c5;
+  --blue: #96b7d0;
+  --magenta: #b7a1c8;
+  --orange: #d2ab8d;
+}
+[data-theme="kanagawa"] {
+  color-scheme: dark;
+  --background: #1f1f28;
+  --foreground: #dcd7ba;
+  --accent: #dcd7ba;
+  --red: #c34043;
+  --yellow: #c0a36e;
+  --green: #76946a;
+  --cyan: #6a9589;
+  --blue: #7e9cd8;
+  --magenta: #957fb8;
+  --orange: #c17158;
+}
+[data-theme="last-horizon"] {
+  color-scheme: dark;
+  --background: #0c0b0c;
+  --foreground: #FAFCFB;
+  --accent: #b59790;
+  --red: #c38b7b;
+  --yellow: #6B5E73;
+  --green: #87a9b0;
+  --cyan: #a5a0b6;
+  --blue: #b59790;
+  --magenta: #c4d8e2;
+}
+[data-theme="lumon"] {
+  color-scheme: dark;
+  --background: #16242d;
+  --foreground: #d6e2ee;
+  --accent: #8bc9eb;
+  --red: #4d86b0;
+  --yellow: #6fa4c9;
+  --green: #5e95bc;
+  --cyan: #b4e4f6;
+  --blue: #6fb8e3;
+  --magenta: #8bc9eb;
+  --orange: #8bc9eb;
+}
+[data-theme="lupine"] {
+  color-scheme: light;
+  --background: #fafafa;
+  --foreground: #212121;
+  --accent: #3264eb;
+  --red: #c900c4;
+  --yellow: #026fde;
+  --green: #4a2fd0;
+  --cyan: #0c67de;
+  --blue: #3264eb;
+  --magenta: #8a4ad7;
+  --orange: #026fde;
+}
+[data-theme="matte-black"] {
+  color-scheme: dark;
+  --background: #121212;
+  --foreground: #bebebe;
+  --accent: #e68e0d;
+  --red: #D35F5F;
+  --yellow: #b91c1c;
+  --green: #FFC107;
+  --cyan: #bebebe;
+  --blue: #e68e0d;
+  --magenta: #D35F5F;
+  --orange: #c63d3d;
+}
+[data-theme="miasma"] {
+  color-scheme: dark;
+  --background: #222222;
+  --foreground: #c2c2b0;
+  --accent: #78824b;
+  --red: #685742;
+  --yellow: #b36d43;
+  --green: #5f875f;
+  --cyan: #c9a554;
+  --blue: #78824b;
+  --magenta: #bb7744;
+  --orange: #8d6242;
+}
+[data-theme="nord"] {
+  color-scheme: dark;
+  --background: #2e3440;
+  --foreground: #d8dee9;
+  --accent: #81a1c1;
+  --red: #bf616a;
+  --yellow: #ebcb8b;
+  --green: #a3be8c;
+  --cyan: #88c0d0;
+  --blue: #81a1c1;
+  --magenta: #b48ead;
+  --orange: #d5967a;
+}
+[data-theme="retro-82"] {
+  color-scheme: dark;
+  --background: #05182e;
+  --foreground: #f6dcac;
+  --accent: #faa968;
+  --red: #f85525;
+  --yellow: #e97b3c;
+  --green: #028391;
+  --cyan: #8cbfb8;
+  --blue: #3f8f8a;
+  --magenta: #3f8f8a;
+  --orange: #faa968;
+}
+[data-theme="ristretto"] {
+  color-scheme: dark;
+  --background: #2c2525;
+  --foreground: #e6d9db;
+  --accent: #f38d70;
+  --red: #fd6883;
+  --yellow: #f9cc6c;
+  --green: #adda78;
+  --cyan: #85dacc;
+  --blue: #f38d70;
+  --magenta: #a8a9eb;
+  --orange: #fb9a77;
+}
+[data-theme="rose-pine"] {
+  color-scheme: light;
+  --background: #faf4ed;
+  --foreground: #575279;
+  --accent: #56949f;
+  --red: #b4637a;
+  --yellow: #ea9d34;
+  --green: #286983;
+  --cyan: #d7827e;
+  --blue: #56949f;
+  --magenta: #907aa9;
+  --orange: #cf8057;
+}
+[data-theme="solitude"] {
+  color-scheme: dark;
+  --background: #101315;
+  --foreground: #cacccc;
+  --accent: #798186;
+  --red: #565d60;
+  --yellow: #d9dbdc;
+  --green: #9fa5a9;
+  --cyan: #707070;
+  --blue: #798186;
+  --magenta: #aeaeae;
+}
+[data-theme="starship"] {
+  color-scheme: dark;
+  --background: #1c1c1e;
+  --foreground: #f5f5f7;
+  --accent: #ff9f0a;
+  --red: #ff5f4a;
+  --yellow: #ffc27a;
+  --green: #ff9f0a;
+  --cyan: #a6dcef;
+  --blue: #8fb8de;
+  --magenta: #ff8fa3;
+  --orange: #ff6a3d;
+}
+[data-theme="tokyo-night"] {
+  color-scheme: dark;
+  --background: #1a1b26;
+  --foreground: #a9b1d6;
+  --accent: #7aa2f7;
+  --red: #f7768e;
+  --yellow: #e0af68;
+  --green: #9ece6a;
+  --cyan: #449dab;
+  --blue: #7aa2f7;
+  --magenta: #ad8ee6;
+  --orange: #eb927b;
+}
+[data-theme="vantablack"] {
+  color-scheme: dark;
+  --background: #000000;
+  --foreground: #ffffff;
+  --accent: #8d8d8d;
+  --red: #a4a4a4;
+  --yellow: #cecece;
+  --green: #b6b6b6;
+  --cyan: #b0b0b0;
+  --blue: #8d8d8d;
+  --magenta: #9b9b9b;
+  --orange: #b9b9b9;
+}
+[data-theme="white"] {
+  color-scheme: light;
+  --background: #ffffff;
+  --foreground: #000000;
+  --accent: #6e6e6e;
+  --red: #2a2a2a;
+  --yellow: #4a4a4a;
+  --green: #3a3a3a;
+  --cyan: #3e3e3e;
+  --blue: #1a1a1a;
+  --magenta: #2e2e2e;
+}

@@ -1,0 +1,28 @@
+`byobu.conf` sits on the boot partition, called `BYOBU`, which you can read from any computer. It's applied on the next boot, then renamed to `byobu.conf.applied` with the Wi-Fi password and Home Assistant token removed, so secrets don't stay on the card.
+
+Drop in a new `byobu.conf` at any time to change something. Only the settings you fill in are changed, and a bad value is skipped with a warning rather than stopping the rest.
+
+The format is `key = value`. Blank values are skipped, quotes are optional, and lines starting with `#` are comments.
+
+## Every setting
+
+| Setting | What it does |
+| --- | --- |
+| `hostname` | The panel's name on your network, as in `byobu.local` |
+| `timezone` | Like `Europe/London` |
+| `wifi_ssid` | Your Wi-Fi network |
+| `wifi_password` | Leave it empty for an open network |
+| `wifi_country` | A two-letter code like `GB`, for the channels allowed where you are |
+| `ssh_key` | Your public key, for root over SSH. Password logins are off |
+| `rotation` | `0`, `90`, `180` or `270` degrees |
+| `url` | A page to show instead of the shell. Must start with `http://`, `https://` or `file://` |
+| `ha_url` | Your Home Assistant, like `http://homeassistant.local:8123` |
+| `ha_token` | A long-lived access token. Set it together with `ha_url` |
+
+## Rotation
+
+The Touch Display 2 is portrait, so `90` or `270` makes it landscape, depending on which way up it's mounted. If the picture's upside down, swap one for the other.
+
+## Home Assistant
+
+`ha_url` and `ha_token` become the Home Assistant plugin's settings, readable only by byobud, and can be changed later in Settings. A long token is easier to set here than on the on-screen keyboard, or use [your phone](/manual/your-phone/).

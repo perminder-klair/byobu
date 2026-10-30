@@ -1,0 +1,114 @@
+A plugin is a folder with a `manifest.json` and an `index.mjs`. Drop one in `/var/lib/byobu/installed/` and restart byobud, and it appears in Settings.
+
+## The manifest
+
+```json
+{
+  "schemaVersion": 1,
+  "id": "hello",
+  "name": "Hello",
+  "version": "1.0.0",
+  "description": "A tile that counts its taps.",
+  "enabledByDefault": true,
+  "schema": [
+    { "key": "label", "type": "string", "label": "Label", "defaultValue": "Hello" }
+  ]
+}
+```
+
+`id` is lower-case letters, numbers, dots and hyphens. `schema` builds the plugin's Settings page, so it needs no interface of its own.
+
+| Type | Draws |
+| --- | --- |
+| `string` | A text field |
+| `url` | A text field for an address |
+| `secret` | A text field whose value never leaves byobud |
+| `boolean` | On and off |
+| `number` | A slider, with `min`, `max` and `step` |
+| `select` | A choice from `options` |
+
+## The code
+
+This one puts a tile on the Home app:
+
+```js
+export default (host) => {
+  let taps = 0;
+  const publish = () => {
+    host.publish({
+      tiles: [{
+        id: "counter",
+        name: String(host.settings.label),
+        icon: "M12,2L2,22H22Z",
+        tone: "green",
+        active: taps > 0,
+        detail: `${taps} taps`,
+        tap: { id: "tap" },
+      }],
+    });
+  };
+  publish();
+  host.status("ok");
+  return {
+    act(id) {
+      if (id === "tap") taps++;
+      publish();
+    },
+  };
+};
+```
+
+The default export gets a `host` and returns what the plugin can do. Changing a plugin's settings stops and restarts it, so `host.settings` is fixed for as long as it's running.
+
+## Publishing
+
+Plugins publish plain data and the shell draws it, so a plugin can't look out of place in any theme. Publishing sends only what changed, so publish everything every time. Anything you leave out stays as it was.
+
+| Key | What it is |
+| --- | --- |
+| `tiles` | Things to control or read |
+| `rooms` | Room names, in the order you want them |
+| `agenda` | Calendar events |
+| `weather` | Now, by the hour and by the day |
+| `players` | What's playing |
+| `cameras` | Pictures to refresh |
+| `timers` | Countdowns any client can draw from `endsAt` |
+| `alerts` | Something that wakes the panel until it's dismissed |
+| `locale` | Language and time zone |
+
+`byobud/src/protocol.ts` has the types, including the sheet a long press opens.
+
+## The host
+
+| Member | What it does |
+| --- | --- |
+| `settings` | Saved values over the manifest's defaults |
+| `publish(data)` | Sends data to every client |
+| `status(state, message)` | `ok`, `off` or `error`, shown in Settings |
+| `log(...)` | Writes to byobud's log |
+| `directory` | A folder of its own, for caches and files |
+| `installed` | Where the plugin itself is |
+| `stored`, `store(value)` | Anything kept across restarts |
+| `pictureUrl(path)` | An address clients can load a picture from |
+| `chime()`, `cue()`, `duck(down)` | Sounds, and turning everything down |
+| `world()`, `perform(...)`, `showFace(face)` | For plugins that work across the others |
+
+## What a plugin returns
+
+| Member | What it does |
+| --- | --- |
+| `act(id, data, value)` | A button was pressed. `value` is what a control was set to |
+| `picture(path)` | Answers with a `Response`, for `pictureUrl` |
+| `stop()` | Clean up before stopping |
+
+## Anything that shouldn't happen by accident
+
+Leave `tap` off a tile for anything that shouldn't happen by brushing the screen, so a tap opens its sheet instead. Put `sensitive: true` on its button, and the [assistant](/manual/assistant/) can only offer a Confirm button for it.
+
+```js
+{ icon: "M12,2L2,22H22Z", label: "Unlock", sensitive: true, action: { id: "unlock" } }
+```
+
+## A real one
+
+`byobud/plugins/open-meteo` is a real plugin in about 100 lines.

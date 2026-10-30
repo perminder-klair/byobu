@@ -1,0 +1,39 @@
+A panel on a wall gets switched off at the wall, so it's built to lose power at any moment.
+
+## Power cuts
+
+The first boot makes a data partition from the rest of the card and moves everything that changes onto it, including settings, logs, Wi-Fi and the browser's profile. From the next boot on the system itself is read-only, so pulling the plug can't damage it.
+
+A setting changed in the last few seconds before the power goes may go back to its old value.
+
+If the system hangs completely, the Pi's hardware watchdog restarts it. If the data partition ever fails, it still boots and answers SSH, without your settings.
+
+## Updates
+
+On the panel, as root:
+
+```sh
+byobu-update              # the shell and byobud, to the latest release
+byobu-update <file|url>   # the same, from a tarball
+byobu-update --os         # the system's packages, then reboot
+```
+
+An update checks its download, installs beside the current version, and goes back by itself if the new one isn't answering within 45 seconds. The last few versions stay in `/data/app`.
+
+<Note>
+
+No release has been published yet, so plain `byobu-update` has nothing to fetch. Use `byobu-update <file>` with a tarball you've made, or `dev/sync` from [your checkout](/manual/developing/).
+
+</Note>
+
+## Publishing a release
+
+Run `builder/make-release` and attach both files in `release/` to a GitHub release.
+
+## Changing the system by hand
+
+To change something on the system yourself, remount it first. The next boot makes it read-only again.
+
+```sh
+mount -o remount,rw /
+```

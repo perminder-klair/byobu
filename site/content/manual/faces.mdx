@@ -1,0 +1,42 @@
+Faces are what the screen shows the room. The numbers in the bar are the faces, and swiping sideways moves between them. A face that would be empty, like Now Playing with nothing playing, isn't there.
+
+## Modular
+
+Climate, the time, what's next, and tiles counting your lights, locks and blinds. Tap the big number to open that thermostat, or use its buttons.
+
+<Shot name="modular" title="modular" number={1} focused alt="The Modular face." />
+
+Settings, under Faces, picks what goes in the main window and which three small tiles go beneath it. Left to itself it picks a thermostat, then whichever tiles add up the home.
+
+## Clock
+
+A large clock, with the weather and the next few things on your calendar beside it.
+
+<Shot name="clock" title="clock" number={2} alt="The Clock face: a large clock, the weather and the week's agenda." />
+
+## Weather
+
+The temperature now, then the next few hours with the chance of rain. It needs a plugin that provides weather, which is [Home Assistant or Open-Meteo](/manual/weather-and-calendars/).
+
+<Shot name="weather" title="weather" number={3} alt="The Weather face: 14 degrees and partly cloudy, with bars for rain over the coming hours." />
+
+## Now Playing
+
+Album art, the title and playback buttons. It's there whenever something's playing or paused.
+
+<Shot name="music" title="now playing" number={4} alt="The Now Playing face with album art and playback buttons." />
+
+## Cameras
+
+Each camera in a window of its own. The pictures refresh every few seconds. Cameras come from [Home Assistant](/manual/home-assistant/).
+
+<Shot name="cameras" title="cameras" number={5} alt="The Cameras face, showing a front door and a garden." />
+
+## Moving around
+
+- **Swipe sideways** to change face.
+- **Swipe up** for the [home screen](/manual/home-screen/), and down to come back.
+- **The numbers in the bar** go straight to a face.
+- **With a mouse**, use the bar and the wheel.
+
+Settings, under Faces, also chooses which faces show. Left alone, the panel goes back to the room by itself: [Idle, dim and night](/manual/idle-and-night/) has what happens and when.

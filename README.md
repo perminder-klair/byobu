@@ -286,6 +286,7 @@ rootfs/     files copied into the image as-is; rootfs/boot goes onto the FAT boo
 shell/      the shell, a web app
 byobud/     the service behind it, and the built-in plugins
 dev/        Home Assistant for development, the panel tunnel, and syncing a running panel
+site/       the website and manual, a Next.js app
 ```
 
 Hearing uses [microWakeWord](https://github.com/OHF-Voice/micro-wake-word), [Silero VAD](https://github.com/snakers4/silero-vad),

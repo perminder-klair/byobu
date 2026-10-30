@@ -1,0 +1,1081 @@
+/* Byōbu's site, drawn the way the panel is: tiled windows with thin borders and sharp corners,
+   titles notched into them, and everything in the theme's colours. */
+
+/* The palette if a remembered theme no longer exists. :where() keeps it weaker than themes.css. */
+:where(:root) {
+  color-scheme: dark;
+  --background: #1f1f28;
+  --foreground: #dcd7ba;
+  --accent: #dcd7ba;
+  --red: #c34043;
+  --yellow: #c0a36e;
+  --green: #76946a;
+  --cyan: #6a9589;
+  --blue: #7e9cd8;
+  --magenta: #957fb8;
+}
+
+/* The same colour roles as the shell, so any Omarchy theme works, light or dark. */
+:root {
+  --window: color-mix(in srgb, var(--background) 95%, transparent);
+  --raised: color-mix(in oklab, var(--background), var(--foreground) 10%);
+  --border: color-mix(in oklab, var(--foreground) 30%, var(--background));
+  /* Lighter than the shell's, as this is read up close and has to pass in the palest themes. */
+  --text-dim: color-mix(in oklab, var(--foreground) 84%, var(--background));
+  /* Moving towards the foreground always moves away from the background, light theme or dark. */
+  --action: color-mix(in oklab, var(--accent), var(--foreground) 54%);
+  --gap: 10px;
+  --bar: 44px;
+  --page: 1240px;
+  --gutter: clamp(16px, 3vw, 32px);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--background);
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--bar) + 28px);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font: 400 1rem/1.65 var(--mono), ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+  font-variant-ligatures: none;
+  overflow-wrap: break-word;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+h2 {
+  font-size: clamp(1.55rem, 1.3rem + 1.1vw, 2.2rem);
+  font-weight: 500;
+}
+
+h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+p {
+  margin: 0;
+  text-wrap: pretty;
+}
+
+a {
+  color: inherit;
+  text-decoration-color: color-mix(in oklab, var(--accent) 60%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+code {
+  padding: 0.1em 0.3em;
+  background: var(--raised);
+  font-family: inherit;
+  font-size: 0.94em;
+}
+
+pre {
+  margin: 0;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+pre code {
+  padding: 0;
+  background: none;
+  font-size: inherit;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+button {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dim {
+  color: var(--text-dim);
+}
+
+.small {
+  font-size: 0.875rem;
+}
+
+.skip {
+  position: fixed;
+  top: -60px;
+  left: 8px;
+  z-index: 30;
+  padding: 8px 14px;
+  background: var(--accent);
+  color: var(--background);
+}
+
+.skip:focus {
+  top: 8px;
+}
+
+/* The bar */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: var(--bar);
+  padding: 0 8px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  background: var(--background);
+}
+
+.bar-links,
+.tray {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.tray {
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.bar a:not(.button) {
+  height: var(--bar);
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text-dim);
+  text-decoration: none;
+}
+
+.bar a:not(.button):hover {
+  color: var(--foreground);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.bar .bar-home {
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+.bar-time {
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.mark {
+  width: 20px;
+  height: 18px;
+  fill: currentColor;
+}
+
+/* Buttons */
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 22px;
+  background: var(--raised);
+  color: var(--foreground);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.button:hover {
+  background: color-mix(in oklab, var(--raised), var(--foreground) 14%);
+  color: var(--foreground);
+}
+
+.button.primary {
+  background: var(--action);
+  color: var(--background);
+  font-weight: 500;
+}
+
+.button.primary:hover {
+  background: color-mix(in oklab, var(--action), var(--foreground) 30%);
+  color: var(--background);
+}
+
+.button.small {
+  min-height: 32px;
+  padding: 0 12px;
+  font-size: 0.875rem;
+}
+
+.cta {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+}
+
+/* Windows */
+.win {
+  position: relative;
+  min-width: 0;
+  padding: 26px 28px;
+  background: var(--window);
+  border: 2px solid var(--border);
+}
+
+.win.focused {
+  border-color: var(--accent);
+}
+
+/* Sits on the top border with the background behind it, cutting a notch like btop's panels. */
+.win-title {
+  position: absolute;
+  z-index: 1;
+  top: -12px;
+  left: 14px;
+  padding: 0 6px;
+  background: var(--background);
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 22px;
+  white-space: nowrap;
+}
+
+.win-title b {
+  margin-right: 2px;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 0;
+  vertical-align: super;
+}
+
+.win.shot {
+  padding: 0;
+  background: var(--raised);
+}
+
+/* Fills the window, so a shot lines up with the words beside it. */
+.win.shot img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.win.code {
+  padding: 24px 26px;
+}
+
+.win.words {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.win.words h2 {
+  margin-bottom: 4px;
+}
+
+.win.words ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.win.words li::before {
+  content: "❯ ";
+  color: var(--accent);
+}
+
+/* Tiling: twelve columns, and a little more room between rows for the notched titles. */
+.tiled {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 22px var(--gap);
+}
+
+.span-2 {
+  grid-column: span 2;
+}
+
+.span-4 {
+  grid-column: span 4;
+}
+
+.span-5 {
+  grid-column: span 5;
+}
+
+.span-6 {
+  grid-column: span 6;
+}
+
+.span-7 {
+  grid-column: span 7;
+}
+
+.span-8 {
+  grid-column: span 8;
+}
+
+.span-12 {
+  grid-column: span 12;
+}
+
+/* Two rows, beside the two windows stacked next to it. */
+.tall {
+  grid-row: span 2;
+}
+
+.section {
+  max-width: calc(var(--page) + 2 * var(--gutter));
+  margin: clamp(72px, 9vw, 128px) auto 0;
+  padding: 0 var(--gutter);
+}
+
+.section-head {
+  max-width: 68ch;
+  margin-bottom: 34px;
+  display: grid;
+  gap: 14px;
+}
+
+.aside {
+  max-width: 68ch;
+  margin-top: 18px;
+  font-size: 0.875rem;
+}
+
+/* The hero. The sun and mountains stay behind everything, as the screen opens in front of them. */
+.hero {
+  position: relative;
+  padding-top: clamp(36px, 5vw, 72px);
+  overflow: clip;
+}
+
+.ridges {
+  position: absolute;
+  inset: auto 0 0;
+  width: 100%;
+  height: 80%;
+  pointer-events: none;
+}
+
+/* The last ridge is the page's own colour, so the mountains settle into it. */
+.ridges .far {
+  fill: color-mix(in oklab, var(--background), var(--blue) 16%);
+}
+
+.ridges .middle {
+  fill: color-mix(in oklab, var(--background), var(--blue) 8%);
+}
+
+.ridges .near {
+  fill: var(--background);
+}
+
+.sun {
+  position: absolute;
+  top: 392px;
+  right: max(3vw, calc(50% - 700px));
+  width: clamp(170px, 16vw, 236px);
+  fill: color-mix(in oklab, var(--background), var(--red) 70%);
+  shape-rendering: crispEdges;
+}
+
+.hero-text {
+  position: relative;
+  max-width: calc(var(--page) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  gap: clamp(28px, 5vw, 72px);
+  align-items: end;
+}
+
+.hero-text h1 {
+  line-height: 0;
+}
+
+.wordmark {
+  width: 100%;
+  max-width: 640px;
+  fill: var(--foreground);
+}
+
+.wordmark .macron {
+  fill: var(--red);
+}
+
+.lede {
+  margin-bottom: 10px;
+  font-size: clamp(1.15rem, 1.05rem + 0.5vw, 1.4rem);
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+/* The folding screen. --open runs from 0, folded, to 1, flat. Each .fold hinges on the left edge
+   of the one before, and rotating by twice the angle each way makes the zig-zag. */
+@property --open {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 1;
+}
+
+.screen {
+  --fold: calc((1 - var(--open)) * 30deg);
+  --leaves: 6;
+  /* The panel's bezel. */
+  --bezel: 1.5cqw;
+  position: relative;
+  max-width: 1120px;
+  margin: clamp(32px, 5vw, 64px) auto 0;
+  padding: 0 var(--gutter);
+  container-type: inline-size;
+  perspective: 2200px;
+  perspective-origin: 50% 30%;
+}
+
+/* Tied to scrolling where that's possible, and otherwise opening once as the page loads. */
+@keyframes unfold {
+  from {
+    --open: 0;
+  }
+  to {
+    --open: 1;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .screen {
+      animation: unfold linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 min(62vh, 560px);
+    }
+  }
+
+  @supports not (animation-timeline: scroll()) {
+    .screen {
+      animation: unfold 1.6s 0.3s var(--ease) both;
+    }
+  }
+}
+
+.folds {
+  position: relative;
+  /* 16:9 inside the bezel. */
+  height: calc((100cqw - 2 * var(--bezel)) * 0.5625 + 2 * var(--bezel));
+  transform: translateX(calc((1 - cos(var(--fold))) * 50cqw));
+  transform-style: preserve-3d;
+}
+
+.fold {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  width: 100%;
+  height: 100%;
+  transform-origin: 0 50%;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.fold[data-side="first"] {
+  left: 0;
+  width: calc(100% / var(--leaves));
+  transform: rotateY(var(--fold));
+}
+
+.fold[data-side="back"] {
+  transform: rotateY(calc(-2 * var(--fold)));
+}
+
+.fold[data-side="front"] {
+  transform: rotateY(calc(2 * var(--fold)));
+}
+
+/* A hair wider than its share, so the page can't show through the hinges. */
+.leaf {
+  position: absolute;
+  inset: 0 -0.5px;
+  overflow: hidden;
+  background: #0b0b0f;
+  backface-visibility: hidden;
+}
+
+/* Each leaf shows its own sixth of the same picture. */
+.leaf img {
+  position: absolute;
+  top: var(--bezel);
+  left: calc(var(--bezel) - var(--leaf) * 100%);
+  width: calc(var(--leaves) * 100% - 2 * var(--bezel));
+  height: calc(100% - 2 * var(--bezel));
+  max-width: none;
+}
+
+/* Light falls on one side of each fold, and fades as the screen flattens. */
+.leaf::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: calc((1 - var(--open)) * 0.75);
+  background: linear-gradient(to right, rgb(0 0 0 / 0.5), rgb(0 0 0 / 0.08));
+}
+
+.fold[data-side="back"] > .leaf::after {
+  background: linear-gradient(to right, rgb(255 255 255 / 0.14), rgb(0 0 0 / 0.34));
+}
+
+.faces-bar {
+  position: relative;
+  margin-top: 14px;
+  padding-bottom: clamp(28px, 4vw, 48px);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workspaces {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.workspaces button {
+  min-height: 44px;
+  padding: 0 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.workspaces button b {
+  color: var(--accent);
+  font-size: 0.75rem;
+  font-weight: 500;
+  vertical-align: super;
+  line-height: 0;
+}
+
+.workspaces button:hover {
+  color: var(--foreground);
+}
+
+.workspaces button[aria-pressed="true"] {
+  color: var(--foreground);
+  font-weight: 700;
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.faces-bar p {
+  font-size: 0.875rem;
+}
+
+/* Plugins, as tiles */
+.plugins {
+  margin-bottom: 32px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap);
+}
+
+.tile {
+  padding: 18px 20px 20px;
+  background: color-mix(in oklab, var(--background), var(--tone) 14%);
+  border: 2px solid var(--tone);
+}
+
+.tile .icon {
+  width: 30px;
+  height: 30px;
+  margin-bottom: 26px;
+  display: block;
+  fill: var(--tone);
+}
+
+.tile p {
+  margin-top: 6px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Theme picker */
+/* The list scrolls inside the window, which stays the height of the shot beside it. */
+.theme-list {
+  padding: 0;
+  min-height: 280px;
+}
+
+.theme-buttons {
+  position: absolute;
+  inset: 12px 6px 6px;
+  padding: 0 4px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.theme-buttons button {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-dim);
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+.theme-buttons button:hover {
+  color: var(--foreground);
+}
+
+.theme-buttons [aria-pressed="true"] {
+  background: var(--raised);
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+.swatch {
+  display: inline-flex;
+  flex: none;
+  outline: 1px solid var(--border);
+}
+
+.swatch i {
+  width: 11px;
+  height: 18px;
+}
+
+/* The manual */
+.manual {
+  max-width: calc(var(--page) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: clamp(24px, 4vw, 48px) var(--gutter) 0;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
+  gap: clamp(32px, 5vw, 72px);
+  align-items: start;
+}
+
+.contents {
+  position: sticky;
+  top: calc(var(--bar) + 20px);
+  max-height: calc(100vh - var(--bar) - 40px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  font-size: 0.875rem;
+}
+
+.part + .part {
+  margin-top: 14px;
+}
+
+.part-name {
+  padding: 0 8px;
+  margin-bottom: 4px;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1.8;
+  text-transform: uppercase;
+}
+
+.part a {
+  min-height: 30px;
+  padding: 3px 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  text-decoration: none;
+}
+
+.part a b {
+  min-width: 1.6em;
+  color: var(--accent);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-align: right;
+}
+
+.part a:hover {
+  color: var(--foreground);
+}
+
+.part a[aria-current] {
+  background: var(--raised);
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+.contents-small {
+  display: none;
+  margin-bottom: 28px;
+  border: 2px solid var(--border);
+  font-size: 0.875rem;
+}
+
+.contents-small summary {
+  min-height: 44px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.contents-small nav {
+  padding: 4px 6px 14px;
+}
+
+.chapter {
+  min-width: 0;
+  max-width: 76ch;
+}
+
+.manual-head {
+  margin-bottom: clamp(28px, 4vw, 44px);
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+  letter-spacing: 0.2em;
+  line-height: 1;
+}
+
+.manual-head .wordmark {
+  display: block;
+  width: 133px;
+}
+
+.prose {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.prose h1 {
+  margin-bottom: 22px;
+  font-size: clamp(1.8rem, 1.5rem + 1.4vw, 2.6rem);
+  font-weight: 500;
+}
+
+.prose h2 {
+  margin: 44px 0 12px;
+  font-size: 1.45rem;
+  scroll-margin-top: calc(var(--bar) + 24px);
+}
+
+.prose h3 {
+  margin: 30px 0 8px;
+  font-size: 1.1rem;
+  scroll-margin-top: calc(var(--bar) + 24px);
+}
+
+.prose p,
+.prose ul,
+.prose ol,
+.prose pre,
+.prose .table-scroll,
+.prose .win {
+  margin: 0 0 16px;
+}
+
+.prose ul,
+.prose ol {
+  padding-left: 1.4em;
+}
+
+.prose li + li {
+  margin-top: 4px;
+}
+
+.prose li::marker {
+  color: var(--accent);
+}
+
+/* A checklist's boxes are its bullets. */
+.prose .contains-task-list {
+  padding-left: 0;
+  list-style: none;
+}
+
+.prose .contains-task-list input {
+  margin: 0 8px 0 0;
+  accent-color: var(--accent);
+}
+
+.prose pre {
+  padding: 16px 18px;
+  background: var(--raised);
+}
+
+.prose .win.shot {
+  margin: 26px 0;
+}
+
+.prose .win.note {
+  margin: 26px 0 22px;
+  padding: 18px 22px;
+}
+
+.prose .note p:last-child {
+  margin-bottom: 0;
+}
+
+.anchor {
+  margin-left: 0.5em;
+  color: var(--text-dim);
+  font-weight: 400;
+  text-decoration: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+:is(h2, h3):hover > .anchor,
+.anchor:focus-visible {
+  opacity: 1;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+th,
+td {
+  padding: 8px 12px 8px 0;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.pager {
+  margin-top: 48px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gap);
+}
+
+.pager a {
+  padding: 12px 16px;
+  display: grid;
+  border: 2px solid var(--border);
+  text-decoration: none;
+}
+
+.pager a:hover {
+  border-color: var(--accent);
+  color: var(--foreground);
+}
+
+.pager .dim {
+  font-size: 0.75rem;
+}
+
+.pager .next {
+  text-align: right;
+}
+
+/* Not found */
+.lost {
+  max-width: 640px;
+  margin: 18vh auto;
+  padding: 0 var(--gutter);
+}
+
+.lost h1 {
+  margin-bottom: 10px;
+  font-size: 1.8rem;
+  font-weight: 500;
+}
+
+/* The footer */
+.footer {
+  position: relative;
+  margin-top: clamp(80px, 10vw, 140px);
+  overflow: clip;
+}
+
+.footer .ridges {
+  height: 240px;
+}
+
+.footer-body {
+  position: relative;
+  max-width: calc(var(--page) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: 0 var(--gutter) 56px;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 32px var(--gap);
+}
+
+.footer .wordmark {
+  width: 190px;
+  margin-bottom: 14px;
+}
+
+.footer nav {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  font-size: 0.875rem;
+}
+
+.footer nav h2 {
+  margin-bottom: 4px;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  line-height: 1.8;
+  text-transform: uppercase;
+}
+
+.footer-body > p {
+  grid-column: 1 / -1;
+  max-width: 76ch;
+}
+
+@media (max-width: 1000px) {
+  .span-2 {
+    grid-column: span 4;
+  }
+
+  .span-4,
+  .span-5,
+  .span-6,
+  .span-7,
+  .span-8 {
+    grid-column: span 12;
+  }
+
+  .hero-text {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .wordmark {
+    max-width: 420px;
+  }
+
+  .plugins {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tall {
+    grid-row: auto;
+  }
+
+  .sun {
+    display: none;
+  }
+
+  .manual {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .contents {
+    display: none;
+  }
+
+  .contents-small {
+    display: block;
+  }
+
+  .chapter {
+    max-width: none;
+  }
+}
+
+@media (max-width: 680px) {
+  .wide-only {
+    display: none !important;
+  }
+
+  .bar-time {
+    display: none;
+  }
+
+  .bar {
+    grid-template-columns: 1fr auto;
+  }
+
+  .plugins {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .win {
+    padding: 22px 18px;
+  }
+
+  .win.shot {
+    padding: 0;
+  }
+
+  .win.code {
+    padding: 20px 16px;
+  }
+
+  .footer-body {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .footer-body > div {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

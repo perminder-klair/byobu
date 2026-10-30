@@ -1,0 +1,43 @@
+To talk to the [assistant](/manual/assistant/), plug in a microphone. The panel works out what you said by itself, in about a second.
+
+<Note>
+
+None of this has been tried with a real microphone or a real person yet. It's been measured with synthetic voices played through a virtual microphone, so expect some rough edges.
+
+</Note>
+
+## Hold to talk
+
+Hold the microphone button by the prompt, say what you want, and let go. The button only appears once there's a microphone.
+
+## The wake phrase
+
+Turn on a wake phrase in Settings, under Assistant, then say "Hey Jarvis, turn off the kitchen lights". The screen wakes, a short sound plays, anything playing turns down while you speak, and it stops listening when you stop talking.
+
+Hey Jarvis is the only choice for now, because the others we tried went off by mistake or missed too much. A custom phrase needs a model trained for it.
+
+If it misses you, especially when you run straight on from the phrase, set How easily it wakes to More easily. It'll go off by mistake a little more, like at the TV.
+
+## Privacy
+
+A wake phrase keeps the microphone open, and a small microphone in the bar shows it is. Listening for the phrase happens on the panel, and nothing leaves until it's heard.
+
+Then the words you say go to Anthropic, like anything you type, and anyone in the room can do it, though opening a lock still takes a press of Confirm. If it goes off by mistake and hears nothing after the phrase, it goes back to waiting without sending anything.
+
+## Speech servers
+
+A speech server is optional. Anything with OpenAI's audio API works, including Whisper servers you can run on your own network. It can make out words better than the panel can, and it's needed for spoken replies.
+
+| Setting | What it does |
+| --- | --- |
+| Speech server | Its address, like `https://api.openai.com/v1` |
+| Speech server key | If it needs one |
+| Listening model | `whisper-1` by default |
+| Speaking model | Leave it empty for no spoken replies |
+| Voice | `alloy` by default |
+
+With a server set but no speaking model, answers only show on the screen.
+
+## What it uses
+
+Hearing uses [microWakeWord](https://github.com/OHF-Voice/micro-wake-word), [Silero VAD](https://github.com/snakers4/silero-vad), [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx), and NVIDIA's [Parakeet](https://huggingface.co/nvidia/parakeet-tdt_ctc-110m) model under CC BY 4.0.

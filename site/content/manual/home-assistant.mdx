@@ -1,0 +1,39 @@
+Home Assistant is a plugin, and on by default once it has an address and a token. It brings your lights, switches, fans, climate, covers, locks, media players, cameras, scenes and scripts onto the panel, along with Home Assistant's weather and calendars.
+
+## Connecting it
+
+Create a long-lived access token: open your Home Assistant profile, go to the Security tab, and find Long-lived access tokens. A user just for the panel keeps it separate from your own login.
+
+Then either put `ha_url` and `ha_token` in [`byobu.conf`](/manual/settings-file/), or open Settings, then Home Assistant, on [your phone](/manual/your-phone/), which is easier than typing a token on the panel.
+
+The token stays in byobud and never reaches a browser.
+
+## Rooms
+
+Rooms are your Home Assistant areas, in the same order. A device's area decides where its tiles go, and an entity's own area overrides its device's. Anything without an area is listed under Other.
+
+Entities you've hidden in Home Assistant don't appear, and neither do its configuration and diagnostic entities.
+
+## What each thing does
+
+| Kind | A tap | Press and hold |
+| --- | --- | --- |
+| Light | On or off | Brightness, colour temperature and colour |
+| Switch | On or off | On and off |
+| Fan | On or off | Speed, mode, oscillation and direction |
+| Climate | Opens its sheet | Target temperature, modes and presets |
+| Blind | Open or close | Position and tilt |
+| Garage door or gate | Opens its sheet while closed | A separate Open button |
+| Lock | Locks it. Opens its sheet while locked | A separate Unlock button |
+| Media player | Play or pause | Controls, volume and source |
+| Scene or script | Runs it | |
+
+A running thermostat also shows plus and minus buttons on its tile.
+
+## Weather and calendars
+
+If you have a weather integration, Home Assistant provides the weather, preferring `weather.forecast_home`. Calendars show the next seven days. You can also get either [without Home Assistant](/manual/weather-and-calendars/).
+
+## If it stops working
+
+The plugin reconnects by itself. A problem with the address or token shows on the panel and in Settings. A new token can go in `byobu.conf` or Settings at any time.
