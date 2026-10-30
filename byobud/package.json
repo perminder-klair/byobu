@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "BYOBU_STATE=../dev/state BYOBU_SHELL=../shell/dist BYOBU_THEMES=../cache/themes BYOBU_DEFAULT_THEME=../dev/state/theme node --watch src/main.ts",
+    "dev": "BYOBU_ADDRESS=127.0.0.1 BYOBU_STATE=../dev/state BYOBU_SHELL=../shell/dist BYOBU_THEMES=../cache/themes BYOBU_DEFAULT_THEME=../dev/state/theme node --watch src/main.ts",
     "build": "tsc --noEmit && node build.mjs",
     "test": "node --test",
     "typecheck": "tsc --noEmit"

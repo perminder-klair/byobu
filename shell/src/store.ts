@@ -31,6 +31,7 @@ export type Room = { name: string; tiles: Placed<Tile>[] };
 
 let store: Store = { connected: false };
 const listeners = new Set<() => void>();
+const showListeners = new Set<(face: string) => void>();
 
 function set(next: Store) {
   store = next;
@@ -41,6 +42,8 @@ function applied(snapshot: Snapshot, update: Update): Snapshot {
   if (update.type === "plugins") return { ...snapshot, plugins: update.plugins };
   if (update.type === "panel") return { ...snapshot, panel: update.panel };
   if (update.type === "outputs") return { ...snapshot, outputs: update.outputs };
+  if (update.type === "clients") return { ...snapshot, clients: update.clients };
+  if (update.type === "show") return snapshot;
   const { plugin, key, id, value } = update;
   const data = { ...snapshot.data[plugin] } as Record<string, unknown>;
   if (id === undefined) data[key] = value;
@@ -57,9 +60,19 @@ export function connect() {
   const events = new EventSource("api/events");
   events.addEventListener("snapshot", (event) => set({ connected: true, snapshot: JSON.parse(event.data) }));
   events.onmessage = (event) => {
-    if (store.snapshot) set({ ...store, snapshot: applied(store.snapshot, JSON.parse(event.data)) });
+    const update: Update = JSON.parse(event.data);
+    if (update.type === "show") for (const listener of showListeners) listener(update.face);
+    if (store.snapshot) set({ ...store, snapshot: applied(store.snapshot, update) });
   };
   events.onerror = () => set({ ...store, connected: false });
+}
+
+// A phone asking this screen to show a face.
+export function onShow(listener: (face: string) => void) {
+  showListeners.add(listener);
+  return () => {
+    showListeners.delete(listener);
+  };
 }
 
 export const getStore = () => store;
@@ -88,6 +101,14 @@ export function updatePanel(changes: Partial<PanelSettings>) {
 
 export function updatePlugin(id: string, changes: { enabled?: boolean; values?: Record<string, unknown> }) {
   send("PUT", `api/plugins/${id}`, changes).catch(console.error);
+}
+
+export function showFace(face: string) {
+  send("POST", "api/show", { face }).catch(console.error);
+}
+
+export function removeClient(id: string) {
+  fetch(`api/clients/${id}`, { method: "DELETE" }).catch(console.error);
 }
 
 export function selectOutput(id: string) {

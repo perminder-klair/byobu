@@ -17,7 +17,7 @@ const pluginDirectories = [join(root, root.endsWith("src") ? "../plugins" : "plu
 
 const core = new Core(state, createSound(state));
 core.themes = listThemes(paths);
-const server = startServer(core, paths, Number(process.env.BYOBU_PORT ?? 8080), "127.0.0.1");
+const server = startServer(core, paths, Number(process.env.BYOBU_PORT ?? 8080), process.env.BYOBU_ADDRESS ?? "0.0.0.0");
 await core.start(pluginDirectories);
 
 for (const signal of ["SIGTERM", "SIGINT"] as const) {

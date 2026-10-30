@@ -1,12 +1,26 @@
 // Settings: the panel, its theme and faces, and each plugin. A plugin's screen is built from the
 // schema in its manifest, so a plugin needs no UI of its own to be configured.
-import { useState } from "react";
+import { createContext, useContext, useEffect, useState, type ComponentProps } from "react";
 import { Choices, Slider } from "./controls";
 import { faceChoices, modularTiles } from "./faces";
 import { Keyboard } from "./Keyboard";
-import { allTiles, selectOutput, updatePanel, updatePlugin, useStore, type PanelSettings, type PluginSummary, type SettingField } from "./store";
+import { PairingCode } from "./PairingCode";
+import {
+  allTiles,
+  removeClient,
+  selectOutput,
+  updatePanel,
+  updatePlugin,
+  useStore,
+  type PanelSettings,
+  type PluginSummary,
+  type SettingField,
+} from "./store";
 
 const MODULAR_TILES = 3;
+
+// On a phone, text fields use its own keyboard rather than the panel's on-screen one.
+export const OnPhone = createContext(false);
 
 const NIGHT_OPTIONS = [
   { value: "auto", label: "22:00 to 07:00" },
@@ -94,14 +108,14 @@ function Toggles({ label, options, on, onChange }: { label: string; options: { v
   );
 }
 
-function ThemeSettings() {
+export function ThemeSettings() {
   const { panel, themes = [] } = useStore().snapshot ?? {};
   if (!panel) return null;
   const options = [{ value: "", label: "As set up" }, ...themes.map((theme) => ({ value: theme, label: theme }))];
   return <Choices label="Theme" options={options} value={panel.theme} onChange={(theme) => updatePanel({ theme })} />;
 }
 
-function FaceSettings() {
+export function FaceSettings() {
   const store = useStore();
   const panel = store.snapshot?.panel;
   if (!panel) return null;
@@ -139,7 +153,35 @@ function FaceSettings() {
   );
 }
 
+// A phone's own text box. A secret starts empty, as byobud never sends one back.
+function TextField({ field, value, onSave }: { field: SettingField; value: string | number | boolean | undefined; onSave: (value: unknown) => void }) {
+  const secret = field.type === "secret";
+  const [text, setText] = useState(secret ? "" : String(value ?? ""));
+  const type: ComponentProps<"input">["type"] = secret ? "password" : field.type === "url" ? "url" : "text";
+  return (
+    <label className="field">
+      <span className="label">{field.label}</span>
+      <input
+        type={type}
+        value={text}
+        placeholder={secret && value ? "Set. Type to replace it." : "Not set"}
+        autoCapitalize="off"
+        autoCorrect="off"
+        onChange={(event) => setText(event.target.value)}
+        onBlur={() => {
+          if (secret ? text !== "" : text !== String(value ?? "")) onSave(text);
+        }}
+      />
+      {field.description && <span className="dim field-help">{field.description}</span>}
+    </label>
+  );
+}
+
 function Field({ field, value, onSave, onEdit }: { field: SettingField; value: string | number | boolean | undefined; onSave: (value: unknown) => void; onEdit: () => void }) {
+  const onPhone = useContext(OnPhone);
+  if (onPhone && (field.type === "string" || field.type === "url" || field.type === "secret")) {
+    return <TextField field={field} value={value} onSave={onSave} />;
+  }
   switch (field.type) {
     case "boolean":
       return <Choices label={field.label} options={ON_OFF} value={value ? "on" : "off"} onChange={(next) => onSave(next === "on")} />;
@@ -174,7 +216,7 @@ function statusLine({ enabled, status }: PluginSummary) {
   return status.state === "ok" ? "Connected" : status.state === "starting" ? "Starting…" : "Waiting";
 }
 
-function PluginSettings({ plugin }: { plugin: PluginSummary }) {
+export function PluginSettings({ plugin }: { plugin: PluginSummary }) {
   const [editing, setEditing] = useState<SettingField>();
   const save = (key: string, value: unknown) => updatePlugin(plugin.id, { values: { [key]: value } });
   return (
@@ -215,6 +257,35 @@ function PluginSettings({ plugin }: { plugin: PluginSummary }) {
   );
 }
 
+export function PhoneSettings() {
+  const clients = useStore().snapshot?.clients ?? [];
+  const onPhone = useContext(OnPhone);
+  const [pairing, setPairing] = useState(false);
+  // A new phone appearing means the code was used.
+  useEffect(() => setPairing(false), [clients.length]);
+  return (
+    <>
+      {!onPhone && (pairing ? <PairingCode /> : (
+        <button className="action" onClick={() => setPairing(true)}>
+          Add a phone
+        </button>
+      ))}
+      {clients.length === 0 && !pairing && <div className="dim">No phones yet. Add one to control the panel and change settings from it.</div>}
+      {clients.map(({ id, name, pairedAt }) => (
+        <div key={id} className="client">
+          <div>
+            {name}
+            <div className="dim">Paired {new Date(pairedAt).toLocaleDateString()}</div>
+          </div>
+          <button className="chip" onClick={() => removeClient(id)}>
+            Remove
+          </button>
+        </div>
+      ))}
+    </>
+  );
+}
+
 export function SettingsApp() {
   const plugins = useStore().snapshot?.plugins ?? [];
   const [page, setPage] = useState("display");
@@ -223,6 +294,7 @@ export function SettingsApp() {
     { id: "display", name: "Display" },
     { id: "theme", name: "Theme" },
     { id: "faces", name: "Faces" },
+    { id: "phones", name: "Phones" },
     ...plugins.map(({ id, name }) => ({ id, name })),
   ];
   return (
@@ -238,6 +310,7 @@ export function SettingsApp() {
         {page === "display" && <PanelControls />}
         {page === "theme" && <ThemeSettings />}
         {page === "faces" && <FaceSettings />}
+        {page === "phones" && <PhoneSettings />}
         {plugin && <PluginSettings key={plugin.id} plugin={plugin} />}
       </div>
     </div>

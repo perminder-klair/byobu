@@ -196,6 +196,12 @@ export type PluginSummary = {
 
 export const SECRET_SET = "•••••••• set";
 
+// A phone or other device paired with the panel.
+export type ClientSummary = { id: string; name: string; pairedAt: string };
+
+// A code a new phone can pair with, as the address to show as a QR code.
+export type Pairing = { url: string; expires: number };
+
 // What a client gets on connecting, then keeps up to date from Update messages.
 export type Snapshot = {
   plugins: PluginSummary[];
@@ -204,6 +210,7 @@ export type Snapshot = {
   panel: PanelSettings;
   themes: string[];
   outputs: Output[];
+  clients: ClientSummary[];
 };
 
 export type KeyedData = Omit<PluginData, "tiles" | "players" | "cameras" | "timers" | "alerts"> & {
@@ -218,4 +225,7 @@ export type Update =
   | { type: "data"; plugin: string; key: keyof PluginData; id?: string; value: unknown }
   | { type: "plugins"; plugins: PluginSummary[] }
   | { type: "panel"; panel: PanelSettings }
-  | { type: "outputs"; outputs: Output[] };
+  | { type: "outputs"; outputs: Output[] }
+  | { type: "clients"; clients: ClientSummary[] }
+  // Asks the panel's screen to show a face, from a phone.
+  | { type: "show"; face: string };

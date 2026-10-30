@@ -22,8 +22,8 @@ Current target: Raspberry Pi 4 with the 7" Touch Display 2, rotated to landscape
    weather and calendars work without it.
 5. **Sound** (done). PipeWire, volume and outputs, AirPlay and Spotify Connect receivers that feed
    Now Playing, and timers with alerts that wake the screen.
-6. **Companion.** A phone app the panel serves, paired by QR code: remote, face editing, plugin
-   settings.
+6. **Companion** (done). A phone app the panel serves, paired by QR code: remote, face editing and
+   plugin settings, with nothing to install.
 7. **Assistant.** A prompt line, then voice. Its tools are the plugin actions and its answers are
    templates.
 8. **Robustness.** Persistent data partition, read-only root, an update command, and a theme
@@ -80,6 +80,19 @@ Modular if not. It dims after 5 minutes and turns off after 30 unless you change
 brings it back without pressing what was under your finger. Swiping from the far view flips
 through the faces and stays far. Night mode, 22:00 to 07:00 by default, turns everything red on
 black at low brightness.
+
+## On your phone
+
+On the panel, open Settings, then Phones, then Add a phone, and scan the code with your phone's
+camera. The phone must be on the same network. It opens the phone app: your rooms and tiles, Now
+Playing and timers, the panel's volume, brightness, theme and faces, and every plugin's settings,
+with your phone's own keyboard for long things like tokens. Add it to your home screen from the
+share menu to keep it like an app.
+
+A code works once, for five minutes, and only the panel can make one, so getting in takes standing
+in front of it. Remove a phone in the same place and it's locked out at once. It's plain HTTP on
+your home network, so anyone already on your Wi-Fi who's watching the traffic could read what a
+phone sends, including a token typed into Settings. Don't forward the panel's port to the internet.
 
 ## Writing a plugin
 
@@ -163,9 +176,11 @@ back. Nothing listens on the network, so the desktop's firewall can stay as it i
 flashing a new image: packages, everything in `rootfs/` except the boot partition, the shell and
 byobud builds, and the desktop's themes. Settings on the panel are left alone.
 
-On the panel, byobud serves the shell and its API on localhost:8080. Plugins run inside it, so the
-browser never holds a token. Settings live in `/var/lib/byobu`. It also sets the backlight, which
-a page can't do. `panel.json` has the panel's own settings, and `plugins/` one file per plugin.
+On the panel, byobud serves the shell and its API on port 8080. Plugins run inside it, so the
+browser never holds a token. The API answers the panel's own browser on localhost and paired
+phones, and nothing else. Settings live in `/var/lib/byobu`: `panel.json` has the panel's own,
+`plugins/` one file per plugin, and `clients.json` the paired phones, with their tokens hashed.
+It also sets the backlight, which a page can't do.
 
 A Pi has about 16 ms a frame and the main thread can't do much in it, which decides how the shell
 moves. Swipes are native scrolling with snap points, and the far and near views animate windows

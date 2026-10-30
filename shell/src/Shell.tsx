@@ -12,7 +12,7 @@ import { Nav } from "./nav";
 import { usePower, wake } from "./power";
 import { PanelControls } from "./settings";
 import { SheetFrame, ShowSheet, TileSheet, toneColour } from "./Sheet";
-import { act, activePlayer, alerts, findTile, problem, useStore, type Placed, type Tile } from "./store";
+import { act, activePlayer, alerts, findTile, onShow, problem, useStore, type Placed, type Tile } from "./store";
 
 import { loadTheme } from "./theme";
 
@@ -108,6 +108,15 @@ export function Shell() {
       },
     }),
     [],
+  );
+
+  useEffect(
+    () =>
+      onShow((id) => {
+        wake();
+        nav.openFace(id);
+      }),
+    [nav],
   );
 
   // Left alone, the panel goes back to the room: whatever was open closes, and the music shows

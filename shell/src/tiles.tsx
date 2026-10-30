@@ -54,6 +54,13 @@ export function TileView({ tile, name }: { tile: Placed<Tile>; name?: string }) 
       }}
       onPointerUp={cancelHold}
       onPointerCancel={cancelHold}
+      // Phones have a long press of their own, which can get in before the timer and cancel it.
+      onContextMenu={() => {
+        cancelHold();
+        if (unavailable || held.current) return;
+        held.current = true;
+        showSheet(tile);
+      }}
       onClick={() => !unavailable && !held.current && press()}
     >
       <Icon path={icon} />

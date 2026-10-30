@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import type { Host, Manifest, Plugin, PluginInstance } from "./plugin.ts";
 import type { KeyedData, Output, PanelSettings, PluginData, PluginStatus, PluginSummary, Snapshot, Update } from "./protocol.ts";
 import { applyValues, loadPanel, loadPlugin, redact, savePanel, savePlugin, withDefaults, type PluginRecord } from "./settings.ts";
+import { Clients } from "./clients.ts";
 import { silent, type Sound } from "./sound.ts";
 
 const KEYED = ["tiles", "players", "cameras", "timers", "alerts"] as const;
@@ -30,6 +31,7 @@ export class Core {
   themes: string[] = [];
   private outputs: Output[] = [];
   private outputsTimer?: ReturnType<typeof setInterval>;
+  readonly clients: Clients;
   private readonly state: string;
   private readonly sound: Sound;
 
@@ -37,6 +39,7 @@ export class Core {
     this.state = state;
     this.sound = sound;
     this.panel = loadPanel(state);
+    this.clients = new Clients(state);
   }
 
   // Later directories can't replace a plugin an earlier one already has.
@@ -202,7 +205,7 @@ export class Core {
   }
 
   snapshot(): Snapshot {
-    return { plugins: this.summaries(), data: this.data, panel: this.panel, themes: this.themes, outputs: this.outputs };
+    return { plugins: this.summaries(), data: this.data, panel: this.panel, themes: this.themes, outputs: this.outputs, clients: this.clients.list() };
   }
 
   async act(id: string, action: string, data: Record<string, unknown> | undefined, value: unknown) {
@@ -235,6 +238,21 @@ export class Core {
     savePanel(this.state, this.panel);
     if (changes.volume !== undefined) this.sound.setVolume(changes.volume);
     this.emit({ type: "panel", panel: this.panel });
+  }
+
+  removeClient(id: string) {
+    this.clients.remove(id);
+    this.emit({ type: "clients", clients: this.clients.list() });
+  }
+
+  pair(code: string, name: string) {
+    const token = this.clients.pair(code, name);
+    if (token) this.emit({ type: "clients", clients: this.clients.list() });
+    return token;
+  }
+
+  showFace(face: string) {
+    this.emit({ type: "show", face });
   }
 
   async stop() {

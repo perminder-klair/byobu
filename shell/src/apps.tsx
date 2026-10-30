@@ -16,7 +16,7 @@ const HOURS_IN_APP = 12;
 
 export type App = { id: string; name: string; icon: string; Component: () => ReactNode };
 
-function HomeApp() {
+export function HomeApp() {
   const store = useStore();
   const all = rooms(store);
   const [selected, setSelected] = useState<string>();

@@ -67,6 +67,7 @@ body {
   overflow: hidden;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
 
 :where(button) {
@@ -1442,4 +1443,170 @@ body {
 .alert .actions {
   width: 100%;
   margin-top: 16px;
+}
+
+/* Pairing, on the panel */
+.pairing {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+}
+
+.pairing-url {
+  margin-top: 12px;
+  font-size: 15px;
+}
+
+.client {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--raised);
+}
+
+/* The phone app */
+.phone {
+  height: 100dvh;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  background: var(--background);
+}
+
+.phone-page {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: calc(14px + env(safe-area-inset-top)) 12px 14px;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.phone-page .rooms {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.phone-page .room-list {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.phone-page .room-list button {
+  flex: none;
+}
+
+.phone-page .tiles {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  overflow: visible;
+}
+
+.phone-page .running {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.phone-issue {
+  padding: 8px 14px;
+  background: var(--raised);
+  color: var(--red);
+  font-size: 15px;
+}
+
+.phone-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding-bottom: env(safe-area-inset-bottom);
+  border-top: 2px solid var(--border);
+}
+
+.phone-tabs button {
+  height: 60px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  font-size: 13px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+.phone-tabs button[aria-current] {
+  color: var(--accent);
+}
+
+.phone-tabs .icon {
+  width: 26px;
+  height: 26px;
+}
+
+.phone-player {
+  display: grid;
+  gap: 8px;
+}
+
+.phone-player img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+.phone-player .song {
+  font-size: 22px;
+}
+
+.phone-player .icon-button {
+  flex: 1;
+  width: auto;
+}
+
+.plugin-list {
+  display: grid;
+  gap: 8px;
+}
+
+.field input {
+  width: 100%;
+  padding: 8px 0;
+  border: 0;
+  border-bottom: 2px solid var(--border);
+  background: none;
+  color: inherit;
+  font: inherit;
+  /* Below 16px, iOS zooms in on focus. */
+  font-size: 16px;
+  outline: none;
+  user-select: text;
+}
+
+.field input:focus {
+  border-color: var(--accent);
+}
+
+.phone .sheet {
+  width: calc(100% - 20px);
+  padding: 16px 14px 20px;
+}
+
+.phone .setpoints {
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.phone .setpoint-value {
+  min-width: 110px;
+  font-size: 44px;
+}
+
+.phone-gate {
+  height: 100dvh;
+  padding: 32px;
+  display: grid;
+  align-content: center;
+  gap: 12px;
+  text-align: center;
 }

@@ -48,6 +48,8 @@ function since(time: string, language?: string): string {
 
 export function SheetFrame({ title, subtitle, tone, power, onClose, children }: SheetFrameProps) {
   const idle = useRef<number | undefined>(undefined);
+  // A long press opens the sheet under the finger, and letting go shouldn't count as a tap on it.
+  const pressedOutside = useRef(false);
   const stillHere = useCallback(() => {
     window.clearTimeout(idle.current);
     idle.current = window.setTimeout(onClose, IDLE_CLOSE_MS);
@@ -61,7 +63,10 @@ export function SheetFrame({ title, subtitle, tone, power, onClose, children }: 
     <div
       className="overlay"
       onPointerDownCapture={stillHere}
-      onClick={(event) => event.target === event.currentTarget && onClose()}
+      onPointerDown={(event) => {
+        pressedOutside.current = event.target === event.currentTarget;
+      }}
+      onClick={(event) => pressedOutside.current && event.target === event.currentTarget && onClose()}
     >
       <div className="sheet" style={{ "--tone": tone } as CSSProperties}>
         <div className="sheet-head">

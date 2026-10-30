@@ -1,7 +1,9 @@
-// byobud's HTTP side: the shell's files, and the API it talks to. On localhost only for now, as
-// nothing here asks who's calling. The phone app will need that first.
+// byobud's HTTP side: the shell's files, and the API it talks to. The files are the same for
+// everyone and hold nothing private. The API takes either the panel's own browser, on localhost,
+// or a paired device. Plain HTTP on the home network, so a token is only as private as the Wi-Fi.
 import { createReadStream, existsSync, readdirSync, statSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import { networkInterfaces } from "node:os";
 import { extname, join, normalize } from "node:path";
 import { Readable } from "node:stream";
 import type { Core } from "./core.ts";
@@ -12,6 +14,7 @@ const TYPES: Record<string, string> = {
   ".js": "text/javascript",
   ".css": "text/css",
   ".json": "application/json",
+  ".webmanifest": "application/manifest+json",
   ".svg": "image/svg+xml",
   ".jpg": "image/jpeg",
   ".png": "image/png",
@@ -21,6 +24,9 @@ const TYPES: Record<string, string> = {
 };
 
 const MAX_BODY = 64 * 1024;
+const COOKIE = "byobu_client";
+// Ten years: a phone stays paired until it's removed in Settings.
+const COOKIE_SECONDS = 10 * 365 * 24 * 3600;
 
 export type Paths = { shell: string; themes: string; defaultTheme: string };
 
@@ -63,8 +69,53 @@ export function listThemes(paths: Paths): string[] {
   }
 }
 
-async function api(core: Core, req: IncomingMessage, res: ServerResponse, path: string) {
+const isLocal = ({ socket }: IncomingMessage) => ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(socket.remoteAddress ?? "");
+
+function tokenFrom({ headers }: IncomingMessage): string | undefined {
+  const bearer = headers.authorization?.match(/^Bearer (.+)$/)?.[1];
+  return bearer ?? headers.cookie?.match(new RegExp(`(?:^|; )${COOKIE}=([0-9a-f]+)`))?.[1];
+}
+
+// The panel's address on the network, for the QR code. The name could fail to resolve on a phone.
+function lanAddress(req: IncomingMessage): string {
+  const addresses = Object.values(networkInterfaces()).flat();
+  const lan = addresses.find((address) => address?.family === "IPv4" && !address.internal);
+  return lan?.address ?? req.headers.host?.split(":")[0] ?? "localhost";
+}
+
+async function api(core: Core, req: IncomingMessage, res: ServerResponse, path: string, port: number) {
   const [, , route, id, sub, name] = path.split("/");
+
+  if (req.method === "POST" && route === "pair") {
+    const { code, name: client } = await readBody(req);
+    const token = core.pair(String(code), String(client ?? "Phone"));
+    if (!token) return fail(res, 403, "That code didn't work. Scan a new one on the panel.");
+    res.writeHead(204, { "Set-Cookie": `${COOKIE}=${token}; Max-Age=${COOKIE_SECONDS}; Path=/; HttpOnly; SameSite=Strict` });
+    return res.end();
+  }
+
+  if (!isLocal(req) && !core.clients.has(tokenFrom(req))) return fail(res, 401, "Not paired");
+
+  if (req.method === "GET" && route === "me") return res.writeHead(204).end();
+
+  // Starting a pairing takes being at the panel, so it can't be done from a phone.
+  if (req.method === "POST" && route === "pairing") {
+    if (!isLocal(req)) return fail(res, 403, "Only the panel can do this");
+    const { code, expires } = core.clients.startPairing();
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify({ url: `http://${lanAddress(req)}:${port}/phone#${code}`, expires }));
+  }
+
+  if (req.method === "DELETE" && route === "clients" && id) {
+    core.removeClient(id);
+    return res.writeHead(204).end();
+  }
+
+  if (req.method === "POST" && route === "show") {
+    const { face } = await readBody(req);
+    core.showFace(String(face));
+    return res.writeHead(204).end();
+  }
 
   if (req.method === "GET" && route === "events") {
     res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-store", Connection: "keep-alive" });
@@ -122,7 +173,7 @@ export function startServer(core: Core, paths: Paths, port: number, address: str
   const server = createServer((req, res) => {
     const path = new URL(req.url ?? "/", "http://localhost").pathname;
     if (path.startsWith("/api/")) {
-      api(core, req, res, path).catch((error) => {
+      api(core, req, res, path, port).catch((error) => {
         if (error instanceof BadRequest) return fail(res, 400, error.message);
         console.error(`${req.method} ${path} failed:`, error);
         if (!res.headersSent) fail(res, 500, String(error));
@@ -134,7 +185,9 @@ export function startServer(core: Core, paths: Paths, port: number, address: str
       const file = themeFile(paths, core.panel.theme, path.slice(1));
       return existsSync(file) ? sendFile(res, file) : fail(res, 404, "No theme");
     }
-    const file = join(paths.shell, normalize(path === "/" ? "index.html" : path));
+    // Anything but the panel itself gets the phone layout.
+    if (path === "/" && !isLocal(req)) return res.writeHead(302, { Location: "/phone" }).end();
+    const file = join(paths.shell, normalize(path === "/" || path === "/phone" ? "index.html" : path));
     if (!file.startsWith(paths.shell) || !existsSync(file) || !statSync(file).isFile()) return fail(res, 404, "Not found");
     sendFile(res, file);
   });
