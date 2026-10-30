@@ -1,6 +1,5 @@
 // Touch controls for the detail sheet, sized for a finger on a wall.
 import { useRef, useState, type CSSProperties, type PointerEvent } from "react";
-import { stateLabel } from "./hass";
 import { Icon } from "./Icon";
 
 // How long a picked value stays on screen if Home Assistant never reports it back, say because
@@ -96,26 +95,25 @@ export function Slider({ label, value, min, max, step = 1, format, onChange, gra
 
 type ChoicesProps = {
   label: string;
-  options: string[];
+  options: { value: string; label: string }[];
   value?: string | null;
-  format?: (option: string) => string;
   onChange: (option: string) => void;
 };
 
 // One of a few named options, like a thermostat's mode.
-export function Choices({ label, options, value, format = stateLabel, onChange }: ChoicesProps) {
+export function Choices({ label, options, value, onChange }: ChoicesProps) {
   return (
     <div className="choices">
       <div className="label">{label}</div>
       <div className="options">
         {options.map((option) => (
           <button
-            key={option}
+            key={option.value}
             className="chip"
-            data-selected={option === value || undefined}
-            onClick={() => onChange(option)}
+            data-selected={option.value === value || undefined}
+            onClick={() => onChange(option.value)}
           >
-            {format(option)}
+            {option.label}
           </button>
         ))}
       </div>

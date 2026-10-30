@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "ics-calendar",
+  "name": "Calendar link",
+  "version": "1.0.0",
+  "description": "Upcoming events from a calendar's private .ics link, as Google Calendar, Apple Calendar and Fastmail can share.",
+  "enabledByDefault": false,
+  "schema": [
+    { "key": "url", "type": "secret", "label": "Calendar link", "description": "A private .ics or webcal:// address. Anyone with it can read the calendar, so it's kept like a password.", "defaultValue": "" }
+  ]
+}

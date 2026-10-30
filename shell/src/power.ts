@@ -5,18 +5,12 @@
 import { useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
 import { morph } from "./morph";
+import { getStore, setBacklight, subscribe, type PanelSettings } from "./store";
 
 export type PowerState = "near" | "far" | "dim" | "blank";
+type Night = PanelSettings["night"];
 
-// Chosen on the panel and kept in its browser profile.
-export type PanelSettings = {
-  brightness: number;
-  night: "auto" | "on" | "off";
-  // Minutes without a touch before the screen turns off, or 0 to leave it on.
-  blankAfter: number;
-};
-
-export type Power = { state: PowerState; night: boolean; settings: PanelSettings };
+export type Power = { state: PowerState; night: boolean };
 
 const FAR_MS = 45_000;
 const DIM_MS = 5 * 60_000;
@@ -25,19 +19,10 @@ const NIGHT_BRIGHTNESS = 8;
 const NIGHT_HOURS = { from: 22, to: 7 };
 // Further than this and a touch was a swipe rather than a tap.
 const TAP_SLOP = 12;
-const SETTINGS_KEY = "byobu.panel";
-const BACKLIGHT_URL = "http://127.0.0.1:8081/";
-const DEFAULTS: PanelSettings = { brightness: 50, night: "auto", blankAfter: 30 };
+// Until byobud has answered.
+const DEFAULTS = { brightness: 50, night: "auto", blankAfter: 30 } as const;
 
-function loadSettings(): PanelSettings {
-  try {
-    return { ...DEFAULTS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? "{}") };
-  } catch {
-    return DEFAULTS;
-  }
-}
-
-let power: Power = { state: "near", night: false, settings: loadSettings() };
+let power: Power = { state: "near", night: false };
 let lastTouch = Date.now();
 let close = true;
 let pressedAt: { x: number; y: number } | undefined;
@@ -45,25 +30,23 @@ let swallowClick = false;
 let backlight: number | undefined;
 const listeners = new Set<() => void>();
 
-function nightNow(setting: PanelSettings["night"]): boolean {
+function nightNow(setting: Night): boolean {
   if (setting !== "auto") return setting === "on";
   const hour = new Date().getHours();
   return hour >= NIGHT_HOURS.from || hour < NIGHT_HOURS.to;
 }
 
-function stateNow({ blankAfter }: PanelSettings): PowerState {
+function stateNow(blankAfter: number): PowerState {
   const idle = Date.now() - lastTouch;
   if (blankAfter > 0 && idle >= blankAfter * 60_000) return "blank";
   if (idle >= DIM_MS) return "dim";
   return close && idle < FAR_MS ? "near" : "far";
 }
 
-function setBacklight(percent: number) {
+function updateBacklight(percent: number) {
   if (percent === backlight) return;
   backlight = percent;
-  // Only a panel has this; anywhere else there's just no backlight to set. The response is
-  // never read, so it doesn't need to pass CORS.
-  fetch(`${BACKLIGHT_URL}?percent=${percent}`, { method: "POST", mode: "no-cors" }).catch(() => {});
+  setBacklight(percent);
 }
 
 function notify() {
@@ -71,9 +54,9 @@ function notify() {
 }
 
 function refresh() {
-  const { settings } = power;
-  const state = stateNow(settings);
-  const night = nightNow(settings.night);
+  const { brightness, night: nightMode, blankAfter } = getStore().snapshot?.panel ?? DEFAULTS;
+  const state = stateNow(blankAfter);
+  const night = nightNow(nightMode);
   if (state === "far") close = false;
   if (state !== power.state || night !== power.night) {
     // Nothing's on screen to morph coming back from blank.
@@ -83,20 +66,8 @@ function refresh() {
     if (morphing) morph(() => flushSync(notify));
     else notify();
   }
-  const bright = night ? Math.min(NIGHT_BRIGHTNESS, settings.brightness) : settings.brightness;
-  setBacklight(state === "blank" ? 0 : Math.round(bright * (state === "dim" ? DIM_FACTOR : 1)));
-}
-
-export function updateSettings(changes: Partial<PanelSettings>) {
-  const settings = { ...power.settings, ...changes };
-  power = { ...power, settings };
-  try {
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-  } catch {
-    // Settings then last until the next restart.
-  }
-  notify();
-  refresh();
+  const bright = night ? Math.min(NIGHT_BRIGHTNESS, brightness) : brightness;
+  updateBacklight(state === "blank" ? 0 : Math.round(bright * (state === "dim" ? DIM_FACTOR : 1)));
 }
 
 // Brings the near view back, for anything that's as good as a tap.
@@ -161,6 +132,8 @@ export function startPower() {
   );
   refresh();
   setInterval(refresh, 1000);
+  // New settings from the panel sheet or a phone apply straight away.
+  subscribe(refresh);
 }
 
 export function usePower(): Power {

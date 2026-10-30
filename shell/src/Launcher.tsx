@@ -4,11 +4,10 @@ import { mdiViewGridOutline } from "@mdi/js";
 import { useContext } from "react";
 import { type App } from "./apps";
 import { eventTime, useClock } from "./clock";
-import { activePlayer } from "./faces";
-import { useHass } from "./hass";
 import { Icon } from "./Icon";
 import { Nav } from "./nav";
-import { condition, degrees, homeWeather } from "./weather";
+import { activePlayer, agenda, firstWeather, locale, useStore } from "./store";
+import { condition, degrees } from "./weather";
 import { Win, WinButton } from "./Win";
 
 const RECENT_APPS = 3;
@@ -22,24 +21,24 @@ type LauncherProps = {
 };
 
 function Widgets() {
-  const hass = useHass();
-  const clock = useClock(hass.config);
+  const store = useStore();
+  const clock = useClock(locale(store));
   const { openFace, openApp } = useContext(Nav);
-  const player = activePlayer(hass);
-  const weather = homeWeather(hass);
-  const [next] = hass.agenda;
+  const player = activePlayer(store);
+  const weather = firstWeather(store);
+  const [next] = agenda(store);
   return (
     <div className="widgets">
       {player && (
         <WinButton title="music" number={1} className="widget" onClick={() => openFace("music")}>
-          <span className="value">{player.attributes.media_title}</span>
-          <span className="dim">{player.attributes.media_artist ?? player.attributes.app_name}</span>
+          <span className="value">{player.title}</span>
+          <span className="dim">{player.by}</span>
         </WinButton>
       )}
       {weather && (
         <WinButton title="weather" number={2} className="widget" onClick={() => openFace("weather")}>
           <span className="value">
-            {degrees(weather.attributes.temperature)} {condition(weather.state)[1]}
+            {degrees(weather.temperature)} {condition(weather.condition)[1]}
           </span>
           <span className="dim">{clock.date}</span>
         </WinButton>
@@ -53,8 +52,7 @@ function Widgets() {
 }
 
 export function Launcher({ open, apps, current, recent, onHome }: LauncherProps) {
-  const hass = useHass();
-  const clock = useClock(hass.config);
+  const clock = useClock(locale(useStore()));
   const { openApp } = useContext(Nav);
   const recentApps = recent.flatMap((id) => apps.find((app) => app.id === id) ?? []).slice(0, RECENT_APPS);
   return (

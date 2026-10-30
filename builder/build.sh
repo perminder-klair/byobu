@@ -27,9 +27,9 @@ for cmd in arch-chroot bsdtar curl gpg losetup mkfs.ext4 mkfs.vfat sfdisk; do
 done
 grep -q '^flags: .*F' /proc/sys/fs/binfmt_misc/qemu-aarch64 2>/dev/null \
   || die "qemu-aarch64 binfmt is not registered (pacman -S qemu-user-static-binfmt)"
-# Building the shell needs the user's own Node setup, so it isn't done here as root.
-[[ -f $ROOT_DIR/shell/dist/index.html ]] \
-  || die "build the shell first: (cd shell && pnpm install && pnpm build)"
+# Building these needs the user's own Node setup, so it isn't done here as root.
+[[ -f $ROOT_DIR/shell/dist/index.html && -f $ROOT_DIR/byobud/dist/byobud.mjs ]] \
+  || die "build these first: (cd shell && pnpm install && pnpm build) and the same in byobud"
 
 # The tarball and its signature are cached together. Delete cache/ to pick up a newer tarball.
 if [[ ! -f $TARBALL ]]; then
@@ -101,10 +101,18 @@ for dir in "$ROOT_DIR"/rootfs/*/; do
   [[ $(basename "$dir") == boot ]] || cp -r --preserve=mode "$dir" "$MNT/"
 done
 
-step "Copying shell"
-cp -r "$ROOT_DIR/shell/dist/." "$MNT/usr/local/share/byobu/shell/"
-# The panel starts out in the theme of the Omarchy desktop that built it, if there is one.
-OMARCHY=$(getent passwd "${SUDO_USER:-root}" | cut -d: -f6)/.local/state/omarchy/current
+step "Copying shell and byobud"
+mkdir -p "$MNT/usr/local/share/byobu"
+cp -r "$ROOT_DIR/shell/dist" "$MNT/usr/local/share/byobu/shell"
+cp -r "$ROOT_DIR/byobud/dist" "$MNT/usr/local/share/byobu/byobud"
+# The panel starts out in the theme of the Omarchy desktop that built it, if there is one, with
+# the rest of that desktop's themes to choose from in Settings.
+HOME_DIR=$(getent passwd "${SUDO_USER:-root}" | cut -d: -f6)
+OMARCHY=$HOME_DIR/.local/state/omarchy/current
+if [[ -d $HOME_DIR/.local/share/omarchy/themes ]]; then
+  "$ROOT_DIR/builder/export-themes" "$HOME_DIR/.local/share/omarchy/themes" "$ROOT_DIR/cache/themes"
+  cp -r "$ROOT_DIR/cache/themes" "$MNT/usr/local/share/byobu/themes"
+fi
 if [[ -f $OMARCHY/theme/colors.toml ]]; then
   "$ROOT_DIR/rootfs/usr/local/bin/byobu-theme" < "$OMARCHY/theme/colors.toml" > "$MNT/etc/byobu/theme.css"
   magick "$OMARCHY/background" -resize '1280x720^' -gravity center -extent 1280x720 -strip -quality 80 \

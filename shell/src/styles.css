@@ -1260,3 +1260,114 @@ body {
 [data-power="blank"] .blank {
   opacity: 1;
 }
+
+/* Settings */
+.settings {
+  --tone: var(--accent);
+  display: grid;
+  align-content: start;
+  gap: 20px;
+  padding: 2px 4px 12px;
+}
+
+.settings .label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 15px;
+  color: var(--text-dim);
+}
+
+.settings .label > span + span {
+  color: var(--foreground);
+}
+
+.plugin-status[data-problem] {
+  color: var(--red);
+}
+
+.field {
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+  background: var(--raised);
+}
+
+.field .label {
+  margin-bottom: 0;
+}
+
+.field-value {
+  min-height: 1.35em;
+  word-break: break-all;
+}
+
+.field-help {
+  font-size: 14px;
+}
+
+.keyboard {
+  position: fixed;
+  inset: 0;
+  z-index: 11;
+  padding: 10px 16px 14px;
+  background: var(--background);
+  display: grid;
+  grid-template-rows: auto auto repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.keyboard-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.keyboard-text {
+  min-height: 56px;
+  padding: 12px 14px;
+  border: 2px solid var(--accent);
+  font-size: 20px;
+  word-break: break-all;
+}
+
+.keyboard-text i {
+  display: inline-block;
+  width: 10px;
+  height: 1.1em;
+  margin-left: 2px;
+  background: var(--foreground);
+  vertical-align: text-bottom;
+}
+
+.keys {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.keys .chip {
+  flex: 1;
+  max-width: 116px;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+}
+
+.keys .chip.wide {
+  flex: 1.4;
+  font-size: 17px;
+}
+
+.keys .chip.space {
+  flex: 4;
+  max-width: none;
+}
+
+.keys .icon {
+  width: 26px;
+  height: 26px;
+}

@@ -4,9 +4,9 @@ import "@fontsource/jetbrains-mono/500.css";
 import "@fontsource/jetbrains-mono/700.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { connect } from "./hass";
 import { startPower } from "./power";
 import { Shell } from "./Shell";
+import { connect } from "./store";
 import { loadTheme } from "./theme";
 import "./styles.css";
 

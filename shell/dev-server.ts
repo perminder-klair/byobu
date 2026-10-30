@@ -1,7 +1,6 @@
 // Development only: serves the files the shell loads at runtime. On a panel they come from its
 // settings instead of the build.
 //
-//   /config.json    the dev Home Assistant's token, from dev/ha-credentials.json
 //   /theme.css      this desktop's current Omarchy theme, pushed to open pages when it changes
 //   /wallpaper.jpg  this desktop's current wallpaper, likewise
 import { execFileSync } from "node:child_process";
@@ -17,21 +16,8 @@ export function byobuDevServer(): Plugin {
     name: "byobu-dev-server",
     apply: "serve",
     configureServer(server) {
-      const credentials = join(server.config.root, "../dev/ha-credentials.json");
       // The same converter the panel uses.
       const byobuTheme = join(server.config.root, "../rootfs/usr/local/bin/byobu-theme");
-
-      server.middlewares.use("/config.json", (_req, res) => {
-        res.setHeader("Cache-Control", "no-store");
-        try {
-          const { token } = JSON.parse(readFileSync(credentials, "utf8"));
-          res.setHeader("Content-Type", "application/json");
-          res.end(JSON.stringify({ token }));
-        } catch {
-          res.statusCode = 503;
-          res.end("No dev/ha-credentials.json yet: run node dev/ha-setup.mjs");
-        }
-      });
 
       server.middlewares.use("/theme.css", (_req, res) => {
         res.setHeader("Cache-Control", "no-store");

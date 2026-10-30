@@ -1,0 +1,20 @@
+{
+  "name": "byobud",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "BYOBU_STATE=../dev/state BYOBU_SHELL=../shell/dist BYOBU_THEMES=../cache/themes BYOBU_DEFAULT_THEME=../dev/state/theme node --watch src/main.ts",
+    "build": "tsc --noEmit && node build.mjs",
+    "test": "node --test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mdi/js": "7.4.47",
+    "home-assistant-js-websocket": "9.8.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "rolldown": "1.2.15",
+    "typescript": "^7.0.2"
+  }
+}

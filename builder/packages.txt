@@ -7,8 +7,8 @@ cage
 chromium
 noto-fonts
 wlr-randr
-# Serves the shell to the kiosk
-darkhttpd
+# Runs byobud, the service behind the shell
+nodejs
 
 # Networking
 iw

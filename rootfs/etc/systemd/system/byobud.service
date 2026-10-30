@@ -1,0 +1,21 @@
+# Runs the plugins and serves the shell to the kiosk, on localhost only. Settings live in
+# /var/lib/byobu. See byobud/ in the source.
+[Unit]
+Description=Byōbu service
+After=network.target byobu-config.service
+
+[Service]
+User=byobu
+StateDirectory=byobu
+StateDirectoryMode=0750
+ExecStart=/usr/bin/node /usr/local/share/byobu/byobud/byobud.mjs
+Restart=always
+RestartSec=2
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoNewPrivileges=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=graphical.target

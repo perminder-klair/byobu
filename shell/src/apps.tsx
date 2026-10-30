@@ -1,69 +1,70 @@
-// The apps behind the home screen. Each is one of a few layouts filled from Home Assistant, the
-// same way a CarPlay app fills in a template.
-import { mdiCalendarBlankOutline, mdiCctv, mdiHomeOutline, mdiMusicNote, mdiPaletteOutline, mdiWeatherPartlyCloudy } from "@mdi/js";
+// The apps behind the home screen. Each is one of a few layouts filled from what plugins publish,
+// the same way a CarPlay app fills in a template.
+import { mdiCalendarBlankOutline, mdiCctv, mdiCogOutline, mdiHomeOutline, mdiMusicNote, mdiPaletteOutline, mdiWeatherPartlyCloudy } from "@mdi/js";
 import { useState, type ReactNode } from "react";
 import { eventTime, useClock } from "./clock";
-import { CameraFeed, cameras, HourlyBars, WeatherLine } from "./faces";
-import { entityName, useForecast, useHass, type Hass, type HassEntity } from "./hass";
-import { nameInRoom, rooms, visibleEntities } from "./rooms";
-import { EntityTile } from "./tiles";
-import { condition, degrees, homeWeather } from "./weather";
-import { Win } from "./Win";
+import { CameraFeed, HourlyBars, WeatherLine } from "./faces";
 import { Icon } from "./Icon";
+import { SettingsApp } from "./settings";
+import { agenda, allTiles, cameras, firstWeather, locale, rooms, useStore, type Placed, type Store, type Tile, type Weather } from "./store";
+import { TileView } from "./tiles";
+import { condition, degrees } from "./weather";
+import { Win } from "./Win";
 
 const HOURS_IN_APP = 12;
 
 export type App = { id: string; name: string; icon: string; Component: () => ReactNode };
 
 function HomeApp() {
-  const hass = useHass();
-  const all = rooms(hass);
+  const store = useStore();
+  const all = rooms(store);
   const [selected, setSelected] = useState<string>();
-  const room = all.find((candidate) => candidate.id === selected) ?? all[0];
-  if (!room) return <div className="dim">Nothing to control yet.</div>;
+  const room = all.find(({ name }) => name === selected) ?? all[0];
+  if (!room) return <div className="dim">Nothing to control yet. Add Home Assistant in Settings.</div>;
   return (
     <div className="rooms">
       <div className="room-list scroll">
-        {all.map(({ id, name }) => (
-          <button key={id} aria-current={id === room.id || undefined} onClick={() => setSelected(id)}>
+        {all.map(({ name }) => (
+          <button key={name} aria-current={name === room.name || undefined} onClick={() => setSelected(name)}>
             {name}
           </button>
         ))}
       </div>
       <div className="tiles scroll">
-        {room.entities.map((entity) => (
-          <EntityTile key={entity.entity_id} entity={entity} name={nameInRoom(entity, room.id && room.name)} />
+        {room.tiles.map((tile) => (
+          <TileView key={tile.id} tile={tile} />
         ))}
       </div>
     </div>
   );
 }
 
-function Tiles({ entities }: { entities: HassEntity[] }) {
+function Tiles({ tiles }: { tiles: Placed<Tile>[] }) {
   return (
     <div className="tiles scroll">
-      {entities.map((entity) => (
-        <EntityTile key={entity.entity_id} entity={entity} name={entityName(entity)} />
+      {tiles.map((tile) => (
+        <TileView key={tile.id} tile={tile} />
       ))}
     </div>
   );
 }
 
 function MusicApp() {
-  return <Tiles entities={visibleEntities(useHass(), ["media_player"])} />;
+  return <Tiles tiles={allTiles(useStore()).filter(({ kind }) => kind === "media")} />;
 }
 
 function ScenesApp() {
-  return <Tiles entities={visibleEntities(useHass(), ["scene", "script"])} />;
+  return <Tiles tiles={allTiles(useStore()).filter(({ kind }) => kind === "scene")} />;
 }
 
 function CalendarApp() {
-  const hass = useHass();
-  const clock = useClock(hass.config);
+  const store = useStore();
+  const clock = useClock(locale(store));
+  const events = agenda(store);
   return (
     <div className="agenda scroll">
-      {hass.agenda.map((event) => (
-        <div key={event.calendar + event.start + event.summary} className="agenda-row">
+      {events.map((event) => (
+        <div key={event.id} className="agenda-row">
           <span className="when">{eventTime(event.start, clock)}</span>
           <span className="what">
             {event.summary}
@@ -71,46 +72,44 @@ function CalendarApp() {
           </span>
         </div>
       ))}
-      {hass.agenda.length === 0 && <div className="dim">Nothing in the next week.</div>}
+      {events.length === 0 && <div className="dim">Nothing in the next week.</div>}
     </div>
   );
 }
 
 function CamerasApp() {
-  const hass = useHass();
-  const feeds = cameras(hass);
+  const feeds = cameras(useStore());
   const [selected, setSelected] = useState<string>();
-  const camera = feeds.find((candidate) => candidate.entity_id === selected);
+  const camera = feeds.find(({ id }) => id === selected);
   if (camera) {
     return (
       <button className="camera-full" aria-label="Back to all cameras" onClick={() => setSelected(undefined)}>
-        <CameraFeed entity={camera} live />
+        <CameraFeed camera={camera} live />
       </button>
     );
   }
   return (
     <div className="camera-grid scroll">
       {feeds.map((feed) => (
-        <button key={feed.entity_id} className="win camera" onClick={() => setSelected(feed.entity_id)}>
-          <span className="win-title">{entityName(feed).toLowerCase()}</span>
-          <CameraFeed entity={feed} live />
+        <button key={feed.id} className="win camera" onClick={() => setSelected(feed.id)}>
+          <span className="win-title">{feed.name.toLowerCase()}</span>
+          <CameraFeed camera={feed} live />
         </button>
       ))}
     </div>
   );
 }
 
-function Days({ entity, language }: { entity: HassEntity; language: string }) {
-  const forecast = useForecast(entity.entity_id, "daily");
+function Days({ weather, language }: { weather: Weather; language: string }) {
   return (
     <div className="days scroll">
-      {forecast.map(({ datetime, condition: state, temperature, templow }) => (
-        <div key={datetime} className="agenda-row">
-          <span className="when">{new Date(datetime).toLocaleDateString(language, { weekday: "short" }).toLowerCase()}</span>
+      {weather.daily.map(({ time, condition: state, temperature, low }) => (
+        <div key={time} className="agenda-row">
+          <span className="when">{new Date(time).toLocaleDateString(language, { weekday: "short" }).toLowerCase()}</span>
           {state && <Icon path={condition(state)[0]} />}
           <span className="what">{state && condition(state)[1]}</span>
           <span>{temperature != null && degrees(temperature)}</span>
-          <span className="dim">{templow != null && degrees(templow)}</span>
+          <span className="dim">{low != null && degrees(low)}</span>
         </div>
       ))}
     </div>
@@ -118,36 +117,33 @@ function Days({ entity, language }: { entity: HassEntity; language: string }) {
 }
 
 function WeatherApp() {
-  const hass = useHass();
-  const clock = useClock(hass.config);
-  const weather = homeWeather(hass);
+  const store = useStore();
+  const clock = useClock(locale(store));
+  const weather = firstWeather(store);
   if (!weather) return null;
   return (
     <div className="weather-app">
-      <WeatherLine entity={weather} number={1} />
+      <WeatherLine weather={weather} number={1} />
       <Win title="next hours · rain" number={2} className="hourly">
-        <HourlyBars entity={weather} hours={HOURS_IN_APP} language={clock.language} />
+        <HourlyBars weather={weather} hours={HOURS_IN_APP} language={clock.language} />
       </Win>
       <Win title="this week" number={3} className="week">
-        <Days entity={weather} language={clock.language} />
+        <Days weather={weather} language={clock.language} />
       </Win>
     </div>
   );
 }
 
-// Apps with nothing to show stay off the home screen.
-export function useApps(hass: Hass): App[] {
-  const apps: App[] = [{ id: "home", name: "home", icon: mdiHomeOutline, Component: HomeApp }];
-  if (visibleEntities(hass, ["media_player"]).length > 0) {
-    apps.push({ id: "music", name: "music", icon: mdiMusicNote, Component: MusicApp });
-  }
-  if (Object.keys(hass.entities).some((id) => id.startsWith("calendar."))) {
-    apps.push({ id: "calendar", name: "calendar", icon: mdiCalendarBlankOutline, Component: CalendarApp });
-  }
-  if (cameras(hass).length > 0) apps.push({ id: "cameras", name: "cameras", icon: mdiCctv, Component: CamerasApp });
-  if (homeWeather(hass)) apps.push({ id: "weather", name: "weather", icon: mdiWeatherPartlyCloudy, Component: WeatherApp });
-  if (visibleEntities(hass, ["scene", "script"]).length > 0) {
-    apps.push({ id: "scenes", name: "scenes", icon: mdiPaletteOutline, Component: ScenesApp });
-  }
+// Apps with nothing to show stay off the home screen. Settings is always there.
+export function useApps(store: Store): App[] {
+  const tiles = allTiles(store);
+  const apps: App[] = [];
+  if (rooms(store).length > 0) apps.push({ id: "home", name: "home", icon: mdiHomeOutline, Component: HomeApp });
+  if (tiles.some(({ kind }) => kind === "media")) apps.push({ id: "music", name: "music", icon: mdiMusicNote, Component: MusicApp });
+  if (agenda(store).length > 0) apps.push({ id: "calendar", name: "calendar", icon: mdiCalendarBlankOutline, Component: CalendarApp });
+  if (cameras(store).length > 0) apps.push({ id: "cameras", name: "cameras", icon: mdiCctv, Component: CamerasApp });
+  if (firstWeather(store)) apps.push({ id: "weather", name: "weather", icon: mdiWeatherPartlyCloudy, Component: WeatherApp });
+  if (tiles.some(({ kind }) => kind === "scene")) apps.push({ id: "scenes", name: "scenes", icon: mdiPaletteOutline, Component: ScenesApp });
+  apps.push({ id: "settings", name: "settings", icon: mdiCogOutline, Component: SettingsApp });
   return apps;
 }

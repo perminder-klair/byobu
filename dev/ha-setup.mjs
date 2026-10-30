@@ -3,7 +3,7 @@
 // wizard, then writes the login and a long-lived access token to dev/ha-credentials.json.
 // The dashboard's dev server reads the token from there. Safe to run again.
 import { randomBytes } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 
 const HA = "http://127.0.0.1:8123";
 const CLIENT_ID = `${HA}/`;
@@ -33,6 +33,8 @@ async function waitForOnboarding() {
     try {
       const response = await fetch(`${HA}/api/onboarding`);
       if (response.ok) return response.json();
+      // Home Assistant removes this once onboarding is finished.
+      if (response.status === 404) return [{ step: "user", done: true }];
     } catch {
       // Not listening yet.
     }
@@ -156,4 +158,13 @@ if (!done.has("user")) {
 }
 
 await arrangeDemo(credentials.token);
+
+// Points the dev byobud at this Home Assistant.
+const STATE = new URL("./state/plugins/", import.meta.url);
+await mkdir(STATE, { recursive: true });
+await writeFile(new URL("home-assistant.json", STATE), JSON.stringify({
+  enabled: true,
+  values: { url: "http://127.0.0.1:8123", token: credentials.token },
+}, null, 2) + "\n", { mode: 0o600 });
+
 console.log("Demo devices are arranged into rooms.");

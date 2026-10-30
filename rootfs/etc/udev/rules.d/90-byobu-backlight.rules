@@ -1,2 +1,2 @@
-# Lets the kiosk user, in the video group, set the backlight. See byobu-backlight.
+# Lets byobud's user, in the video group, set the backlight.
 SUBSYSTEM=="backlight", ACTION=="add", RUN+="/usr/bin/chgrp video /sys%p/brightness", RUN+="/usr/bin/chmod g+w /sys%p/brightness"

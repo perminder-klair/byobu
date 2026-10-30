@@ -3,14 +3,13 @@
 
 rotation=$(cat /etc/byobu/rotation 2>/dev/null)
 url=$(cat /etc/byobu/url 2>/dev/null)
-# Once Home Assistant is set up, the shell is the default page; until then, the touch test.
-if [[ -z $url ]]; then
-  if [[ -f /etc/byobu/config.json ]]; then
-    url=http://localhost:8080/
-  else
-    url=file:///usr/local/share/byobu/test/index.html
-  fi
-fi
+url=${url:-http://localhost:8080/}
+
+# byobud takes a moment to start, and Chromium wouldn't try again after an error page.
+for _ in {1..100}; do
+  (exec 3<>/dev/tcp/127.0.0.1/8080) 2>/dev/null && break
+  sleep 0.2
+done
 
 # Rotation is a property of the DSI panel; an HDMI screen plugged in for debugging stays as is.
 output=$(wlr-randr | awk '/^DSI-/ { print $1; exit }')

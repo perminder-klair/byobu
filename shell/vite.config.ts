@@ -9,8 +9,7 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    // Home Assistant's API and pictures through the page's own origin, so the panel needs only
-    // one tunnel.
-    proxy: { "/api": { target: "http://127.0.0.1:8123", ws: true } },
+    // byobud, running with `pnpm dev` in byobud/.
+    proxy: { "/api": "http://127.0.0.1:8080" },
   },
 });

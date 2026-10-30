@@ -4,72 +4,40 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useApps } from "./apps";
 import { Bar } from "./Bar";
-import { Choices, Slider } from "./controls";
-import { Details, SheetFrame, ShowDetails } from "./Details";
-import { activePlayer, useFaces } from "./faces";
-import { useHass, type Hass } from "./hass";
+import { useFaces } from "./faces";
 import { Launcher } from "./Launcher";
 import { Nav } from "./nav";
-import { updateSettings, usePower, wake, type PanelSettings } from "./power";
-import { roomName } from "./rooms";
-
-function statusMessage({ status, error }: Hass): string {
-  if (status === "failed") return `Can't reach Home Assistant: ${error}`;
-  if (status === "reconnecting") return "Reconnecting to Home Assistant…";
-  return "Connecting to Home Assistant…";
-}
-
-const SLEEP_OPTIONS = ["15", "30", "60", "0"];
-const NIGHT_OPTIONS: PanelSettings["night"][] = ["auto", "on", "off"];
-
-function PanelSheet({ onClose }: { onClose: () => void }) {
-  const { settings } = usePower();
-  return (
-    <SheetFrame title="Panel" subtitle="This screen" tone="var(--accent)" onClose={onClose}>
-      <Slider
-        label="Brightness"
-        value={settings.brightness}
-        min={5}
-        max={100}
-        step={5}
-        format={(value) => `${value}%`}
-        onChange={(brightness) => updateSettings({ brightness })}
-      />
-      <Choices
-        label="Night mode"
-        options={NIGHT_OPTIONS}
-        value={settings.night}
-        format={(option) => (option === "auto" ? "22:00 to 07:00" : option === "on" ? "On" : "Off")}
-        onChange={(night) => updateSettings({ night: night as PanelSettings["night"] })}
-      />
-      <Choices
-        label="Turn the screen off after"
-        options={SLEEP_OPTIONS}
-        value={String(settings.blankAfter)}
-        format={(minutes) => (minutes === "0" ? "Never" : `${minutes} minutes`)}
-        onChange={(minutes) => updateSettings({ blankAfter: Number(minutes) })}
-      />
-    </SheetFrame>
-  );
-}
+import { usePower, wake } from "./power";
+import { PanelControls } from "./settings";
+import { SheetFrame, ShowSheet, TileSheet } from "./Sheet";
+import { activePlayer, findTile, problem, useStore, type Placed, type Tile } from "./store";
+import { loadTheme } from "./theme";
 
 export function Shell() {
-  const hass = useHass();
+  const store = useStore();
   const power = usePower();
-  const faces = useFaces(hass);
-  const apps = useApps(hass);
+  const faces = useFaces(store);
+  const apps = useApps(store);
   const [faceId, setFaceId] = useState("modular");
   const [launcherOpen, setLauncherOpen] = useState(false);
   const [appId, setAppId] = useState<string>();
   const [recent, setRecent] = useState<string[]>([]);
-  const [details, setDetails] = useState<{ entityId: string; name: string }>();
+  const [sheet, setSheet] = useState<{ plugin: string; id: string }>();
   const [panelSheet, setPanelSheet] = useState(false);
 
   // A face can disappear, like Now Playing when the music stops.
   const face = Math.max(0, faces.findIndex(({ id }) => id === faceId));
   const app = launcherOpen ? apps.find(({ id }) => id === appId) : undefined;
   const far = power.state !== "near";
-  const detailed = details && hass.entities[details.entityId];
+  const issue = problem(store);
+  const sheetTile = sheet && findTile(store, sheet.plugin, sheet.id);
+  const theme = store.snapshot?.panel.theme;
+  const firstTheme = useRef(true);
+  useEffect(() => {
+    if (theme === undefined) return;
+    if (!firstTheme.current) loadTheme();
+    firstTheme.current = false;
+  }, [theme]);
 
   const stage = useRef<HTMLDivElement>(null);
   const pages = useRef<HTMLDivElement>(null);
@@ -114,9 +82,9 @@ export function Shell() {
     };
   }, []);
 
-  const closeDetails = useCallback(() => setDetails(undefined), []);
+  const closeSheet = useCallback(() => setSheet(undefined), []);
   const closePanelSheet = useCallback(() => setPanelSheet(false), []);
-  const showDetails = useCallback((entityId: string, name: string) => setDetails({ entityId, name }), []);
+  const showSheet = useCallback(({ plugin, id }: Placed<Tile>) => setSheet({ plugin, id }), []);
   const nav = useMemo(
     () => ({
       openFace(id: string) {
@@ -141,16 +109,16 @@ export function Shell() {
     if (far) {
       setLauncherOpen(false);
       setAppId(undefined);
-      setDetails(undefined);
+      setSheet(undefined);
       setPanelSheet(false);
-      setFaceId(activePlayer(hass) ? "music" : "modular");
+      setFaceId(activePlayer(store) ? "music" : (faces[0]?.id ?? "modular"));
     }
   }
 
   return (
-    <ShowDetails value={showDetails}>
+    <ShowSheet value={showSheet}>
       <Nav value={nav}>
-        <div className="shell" data-far={far || undefined} data-power={power.state} data-status={hass.status}>
+        <div className="shell" data-far={far || undefined} data-power={power.state}>
           <div className="wallpaper" />
           <Bar
             faces={faces}
@@ -183,20 +151,16 @@ export function Shell() {
             />
           </div>
           {!launcherOpen && <button className="grabber" aria-label="Open the home screen" onClick={() => setLauncherOpen(true)} />}
-          {details && detailed && (
-            <Details
-              key={details.entityId}
-              entity={detailed}
-              name={details.name}
-              room={roomName(hass, details.entityId)}
-              onClose={closeDetails}
-            />
+          {sheetTile && <TileSheet key={sheetTile.id} tile={sheetTile} onClose={closeSheet} />}
+          {panelSheet && (
+            <SheetFrame title="Panel" subtitle="This screen" tone="var(--accent)" onClose={closePanelSheet}>
+              <PanelControls />
+            </SheetFrame>
           )}
-          {panelSheet && <PanelSheet onClose={closePanelSheet} />}
-          {hass.status !== "connected" && <div className="status">{statusMessage(hass)}</div>}
+          {issue && <div className="status">{issue}</div>}
           <div className="blank" />
         </div>
       </Nav>
-    </ShowDetails>
+    </ShowSheet>
   );
 }

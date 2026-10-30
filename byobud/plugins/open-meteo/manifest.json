@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "open-meteo",
+  "name": "Open-Meteo weather",
+  "version": "1.0.0",
+  "description": "Weather from open-meteo.com, with no account or Home Assistant needed. If another plugin also provides weather, the first in Settings wins.",
+  "enabledByDefault": false,
+  "schema": [
+    { "key": "latitude", "type": "string", "label": "Latitude", "description": "Like 51.51", "defaultValue": "" },
+    { "key": "longitude", "type": "string", "label": "Longitude", "description": "Like -0.13", "defaultValue": "" },
+    {
+      "key": "unit",
+      "type": "select",
+      "label": "Temperature",
+      "defaultValue": "celsius",
+      "options": [
+        { "value": "celsius", "label": "°C" },
+        { "value": "fahrenheit", "label": "°F" }
+      ]
+    }
+  ]
+}

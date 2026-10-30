@@ -1,11 +1,11 @@
-// The time, in Home Assistant's language and time zone. A wall clock has to work without Home
-// Assistant, so until its settings arrive this is the panel's own time, on a 24-hour clock.
+// The time, in the language and time zone a plugin says, if one does. A wall clock has to work
+// by itself, so otherwise this is the panel's own time, on a 24-hour clock.
 import { useEffect, useState } from "react";
-import { locale, type HassConfig } from "./hass";
+import type { Locale } from "./store";
 
 export type Clock = { time: string; date: string; weekday: string; language: string; timeZone?: string };
 
-export function useClock(config?: HassConfig): Clock {
+export function useClock(locale?: Locale): Clock {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     let timer: number;
@@ -19,8 +19,8 @@ export function useClock(config?: HassConfig): Clock {
     return () => window.clearTimeout(timer);
   }, []);
 
-  const language = locale(config) ?? "en-GB";
-  const timeZone = config?.time_zone;
+  const language = locale?.language ?? "en-GB";
+  const timeZone = locale?.timeZone;
   const parts = new Intl.DateTimeFormat(language, { hour: "numeric", minute: "2-digit", timeZone }).formatToParts(now);
   const part = (type: string) => parts.find((p) => p.type === type)?.value;
   const date = new Intl.DateTimeFormat(language, { weekday: "long", day: "numeric", month: "long", timeZone });

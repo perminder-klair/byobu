@@ -1,0 +1,21 @@
+#!/bin/bash
+# Turns Omarchy themes into what byobud serves: a folder per theme with its theme.css and a
+# wallpaper at the panel's size. Themes already done are skipped, as resizing takes a while.
+#
+#   builder/export-themes ~/.local/share/omarchy/themes cache/themes
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+SOURCE=${1:?usage: export-themes <omarchy themes> <output>}
+OUTPUT=${2:?usage: export-themes <omarchy themes> <output>}
+
+for theme in "$SOURCE"/*/; do
+  name=$(basename "$theme")
+  [[ -f $theme/colors.toml && ! -f $OUTPUT/$name/wallpaper.jpg ]] || continue
+  wallpaper=$(find -L "$theme/backgrounds" -maxdepth 1 -type f \( -name '*.jpg' -o -name '*.jpeg' -o -name '*.png' -o -name '*.webp' \) 2>/dev/null | sort | head -1)
+  mkdir -p "$OUTPUT/$name"
+  rootfs/usr/local/bin/byobu-theme < "$theme/colors.toml" > "$OUTPUT/$name/theme.css"
+  if [[ -n $wallpaper ]]; then
+    magick "$wallpaper" -resize '1280x720^' -gravity center -extent 1280x720 -strip -quality 80 "$OUTPUT/$name/wallpaper.jpg"
+  fi
+done

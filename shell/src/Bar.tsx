@@ -2,9 +2,9 @@
 import { mdiBrightness6, mdiCloudOffOutline, mdiViewGridOutline, mdiWeatherNight } from "@mdi/js";
 import { useClock } from "./clock";
 import type { Face } from "./faces";
-import { useHass } from "./hass";
 import { Icon } from "./Icon";
 import { usePower } from "./power";
+import { locale, problem, useStore } from "./store";
 
 type BarProps = {
   faces: Face[];
@@ -16,9 +16,9 @@ type BarProps = {
 };
 
 export function Bar({ faces, current, onFace, onHome, onPanel }: BarProps) {
-  const hass = useHass();
+  const store = useStore();
   const { night } = usePower();
-  const clock = useClock(hass.config);
+  const clock = useClock(locale(store));
   return (
     <div className="bar">
       <div className="workspaces">
@@ -35,7 +35,7 @@ export function Bar({ faces, current, onFace, onHome, onPanel }: BarProps) {
         {clock.weekday} {clock.time}
       </div>
       <div className="tray">
-        {hass.status !== "connected" && <Icon path={mdiCloudOffOutline} />}
+        {problem(store) && <Icon path={mdiCloudOffOutline} />}
         {night && <Icon path={mdiWeatherNight} />}
         <button aria-label="Panel settings" onClick={onPanel}>
           <Icon path={mdiBrightness6} />

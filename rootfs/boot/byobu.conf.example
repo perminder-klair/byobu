@@ -26,6 +26,6 @@ rotation = 270
 ha_url =
 ha_token =
 
-# Page the kiosk shows instead of the shell. Leave blank for the shell, or the
-# touch test page while Home Assistant isn't set up.
+# Page the kiosk shows instead of the shell. Leave blank for the shell. To check new
+# hardware, use the touch test page: file:///usr/local/share/byobu/test/index.html
 url =

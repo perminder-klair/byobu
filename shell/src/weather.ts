@@ -1,4 +1,4 @@
-// Weather conditions as words and icons, and which weather entity speaks for the home.
+// Weather conditions as words and icons.
 import {
   mdiAlertCircleOutline,
   mdiWeatherCloudy,
@@ -16,9 +16,8 @@ import {
   mdiWeatherWindy,
   mdiWeatherWindyVariant,
 } from "@mdi/js";
-import { entityName, type Hass, type HassEntity } from "./hass";
 
-// Home Assistant's weather conditions.
+// The conditions plugins report, which are Home Assistant's.
 export const CONDITIONS: Record<string, [icon: string, label: string]> = {
   "clear-night": [mdiWeatherNight, "clear"],
   cloudy: [mdiWeatherCloudy, "cloudy"],
@@ -38,14 +37,5 @@ export const CONDITIONS: Record<string, [icon: string, label: string]> = {
 };
 
 export const condition = (state: string) => CONDITIONS[state] ?? [mdiAlertCircleOutline, state];
-
-// Home Assistant's default forecast for the home, if it's there, or the first by name.
-export function homeWeather(hass: Hass): HassEntity | undefined {
-  const all = Object.values(hass.entities).filter((entity) => entity.entity_id.startsWith("weather."));
-  return (
-    all.find((entity) => entity.entity_id === "weather.forecast_home") ??
-    all.sort((a, b) => entityName(a).localeCompare(entityName(b)))[0]
-  );
-}
 
 export const degrees = (value: number) => `${Math.round(value)}°`;
