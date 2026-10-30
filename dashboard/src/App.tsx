@@ -1,4 +1,5 @@
-import type { CSSProperties } from "react";
+import { useCallback, useState, type CSSProperties } from "react";
+import { Details, ShowDetails } from "./Details";
 import { Header } from "./Header";
 import { entityName, useHass, type Hass, type HassEntity } from "./hass";
 import { EntityTile } from "./tiles";
@@ -41,6 +42,10 @@ function statusMessage({ status, error }: Hass): string {
 
 export function App() {
   const hass = useHass();
+  const [details, setDetails] = useState<{ entityId: string; name: string }>();
+  const showDetails = useCallback((entityId: string, name: string) => setDetails({ entityId, name }), []);
+  const closeDetails = useCallback(() => setDetails(undefined), []);
+  const detailed = details && hass.entities[details.entityId];
   const weather = Object.values(hass.entities)
     .filter((entity) => domain(entity) === "weather")
     .sort((a, b) => entityName(a).localeCompare(entityName(b)))[0];
@@ -49,16 +54,27 @@ export function App() {
     <div className="app" data-status={hass.status}>
       <Header config={hass.config} weather={weather} />
       <main>
-        {hass.areas &&
-          rooms(hass, hass.areas).map((room) => (
-            <section key={room.id} style={{ "--tiles": room.entities.length } as CSSProperties}>
-              <h2>{room.name}</h2>
-              {room.entities.map((entity) => (
-                <EntityTile key={entity.entity_id} entity={entity} name={nameInRoom(entity, room.id && room.name)} />
-              ))}
-            </section>
-          ))}
+        <ShowDetails value={showDetails}>
+          {hass.areas &&
+            rooms(hass, hass.areas).map((room) => (
+              <section key={room.id} style={{ "--tiles": room.entities.length } as CSSProperties}>
+                <h2>{room.name}</h2>
+                {room.entities.map((entity) => (
+                  <EntityTile key={entity.entity_id} entity={entity} name={nameInRoom(entity, room.id && room.name)} />
+                ))}
+              </section>
+            ))}
+        </ShowDetails>
       </main>
+      {details && detailed && (
+        <Details
+          key={details.entityId}
+          entity={detailed}
+          name={details.name}
+          room={hass.areas?.find((area) => area.area_id === hass.placements.get(details.entityId)?.area)?.name}
+          onClose={closeDetails}
+        />
+      )}
       {hass.status !== "connected" && <div className="status">{statusMessage(hass)}</div>}
     </div>
   );

@@ -9,7 +9,8 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: true,
-    // Home Assistant through the page's own origin, so the panel needs only one tunnel.
-    proxy: { "/api/websocket": { target: "http://127.0.0.1:8123", ws: true } },
+    // Home Assistant's API and pictures through the page's own origin, so the panel needs only
+    // one tunnel.
+    proxy: { "/api": { target: "http://127.0.0.1:8123", ws: true } },
   },
 });

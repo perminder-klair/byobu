@@ -40,6 +40,13 @@ Flash the image:
 sudo dd if=out/byobu-YYYYMMDD.img of=/dev/sdX bs=4M conv=fsync status=progress
 ```
 
+## Using the dashboard
+
+Tiles are grouped into your Home Assistant areas. A tap switches lights, switches and fans,
+plays or pauses media, and opens or closes blinds. Press and hold any tile for the rest:
+brightness and colour, fan speed, thermostat modes, blind position, volume. Unlocking a lock and
+opening a garage door or gate only happen from there, so brushing the screen can't do them.
+
 ## Developing the dashboard
 
 The dashboard (`dashboard/`) is a React app on Home Assistant's WebSocket API. Develop it on the

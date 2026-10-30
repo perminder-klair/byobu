@@ -194,25 +194,335 @@ h2 {
   gap: 8px;
 }
 
-.stepper button {
+.stepper .round {
   width: 52px;
   height: 52px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--surface-raised);
-  color: inherit;
-  display: grid;
-  place-items: center;
-}
-
-.stepper button:active {
-  background: color-mix(in oklab, var(--surface-raised), var(--tone) 35%);
 }
 
 .stepper .icon {
   width: 24px;
   height: 24px;
+}
+
+/* Buttons, here and in the detail sheet. Selected marks the state a device is in. */
+.round,
+.chip,
+.action {
+  border: 0;
+  background: var(--surface-raised);
+  color: inherit;
+  font: inherit;
+  transition: background-color 0.2s;
+}
+
+.round[data-selected],
+.chip[data-selected],
+.action[data-selected] {
+  background: color-mix(in oklab, var(--surface-raised), var(--tone) 50%);
+}
+
+.round:active,
+.chip:active,
+.action:active {
+  background: color-mix(in oklab, var(--surface-raised), var(--tone) 30%);
+}
+
+.round {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.round .icon,
+.action .icon {
+  width: 26px;
+  height: 26px;
   fill: currentColor;
+}
+
+.chip {
+  min-height: 52px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font-size: 18px;
+}
+
+.action {
+  height: 72px;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 500;
+}
+
+/* The detail sheet, over the dimmed dashboard. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgb(0 0 0 / 0.55);
+  animation: fade-in 0.15s ease-out;
+}
+
+.sheet {
+  width: min(760px, 100% - 64px);
+  max-height: calc(100% - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  padding: 22px 26px 28px;
+  border-radius: 26px;
+  background: var(--surface);
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.4);
+  animation: rise 0.2s ease-out;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sheet-head .titles {
+  flex: 1;
+  min-width: 0;
+}
+
+.sheet-name {
+  font-size: 28px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sheet-state {
+  margin-top: 2px;
+  font-size: 16px;
+  color: var(--text-dim);
+}
+
+.sheet-body {
+  display: grid;
+  gap: 22px;
+  margin-top: 22px;
+}
+
+.sheet-body:empty,
+.sheet-body > :empty {
+  display: none;
+}
+
+.sheet .label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  font-size: 16px;
+  color: var(--text-dim);
+}
+
+.sheet .label > span + span {
+  color: var(--foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+.track {
+  position: relative;
+  height: 64px;
+  border-radius: 16px;
+  background: var(--surface-raised);
+  overflow: hidden;
+  touch-action: none;
+}
+
+.fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  /* Never quite empty, so there's always a handle to grab. */
+  width: calc(28px + (100% - 28px) * var(--at));
+  background: color-mix(in oklab, var(--surface-raised), var(--tone) 65%);
+}
+
+.fill::after,
+.marker {
+  position: absolute;
+  background: white;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.3);
+}
+
+.fill::after {
+  content: "";
+  top: 50%;
+  right: 10px;
+  width: 5px;
+  height: 26px;
+  translate: 0 -50%;
+  border-radius: 3px;
+}
+
+/* On a gradient, a ring around the picked point instead of a fill. */
+.marker {
+  top: 8px;
+  bottom: 8px;
+  left: calc((100% - 16px) * var(--at));
+  width: 16px;
+  border: 4px solid white;
+  border-radius: 8px;
+  background: none;
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.actions {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px 48px;
+}
+
+.setpoints {
+  display: flex;
+  justify-content: center;
+  gap: 64px;
+}
+
+.setpoint {
+  display: grid;
+  justify-items: center;
+}
+
+.setpoint .label {
+  margin-bottom: 4px;
+}
+
+.setpoint-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.setpoint-row .round {
+  width: 64px;
+  height: 64px;
+}
+
+.setpoint-value {
+  min-width: 150px;
+  font-size: 60px;
+  font-weight: 300;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.reading {
+  margin-top: -8px;
+  text-align: center;
+  color: var(--text-dim);
+}
+
+.now-playing {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.now-playing img {
+  flex: none;
+  width: 112px;
+  height: 112px;
+  border-radius: 14px;
+  object-fit: cover;
+  background: var(--surface-raised);
+}
+
+.now-playing .titles {
+  min-width: 0;
+}
+
+.media-title {
+  font-size: 22px;
+  font-weight: 500;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.media-by {
+  margin-top: 4px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.transport {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 28px;
+}
+
+.transport .round {
+  width: 64px;
+  height: 64px;
+}
+
+.transport .play {
+  width: 80px;
+  height: 80px;
+}
+
+.transport .play .icon {
+  width: 36px;
+  height: 36px;
+}
+
+.volume {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.volume .slider {
+  flex: 1;
+}
+
+/* Square-ish, to line up with the slider beside it. */
+.volume .round {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
 }
 
 .app:not([data-status="connected"]) main {

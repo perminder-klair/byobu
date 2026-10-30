@@ -17,11 +17,15 @@ import {
   mdiWindowShutter,
   mdiWindowShutterOpen,
 } from "@mdi/js";
-import { useRef, type CSSProperties, type ReactNode } from "react";
-import { callAction, type HassEntity } from "./hass";
+import { useContext, useRef, type CSSProperties, type ReactNode } from "react";
+import { RoundButton } from "./controls";
+import { ShowDetails } from "./Details";
+import { CoverFeature, MediaFeature } from "./features";
+import { callAction, stateLabel, supports, type HassEntity } from "./hass";
 import { Icon } from "./Icon";
 
-const HOLD_MS = 600;
+// A press this long opens the detail sheet instead of tapping.
+const HOLD_MS = 500;
 
 // What every tile gets: the entity, and its name as it should read where it's shown.
 type EntityProps = { entity: HassEntity; name: string };
@@ -32,38 +36,38 @@ type TileProps = EntityProps & {
   tone: string;
   active: boolean;
   detail: string;
+  // What a tap does. Without one, a tap opens the detail sheet, which is also how anything that
+  // shouldn't happen by brushing the screen, like unlocking, is done.
   onTap?: () => void;
-  // A long press, for things that shouldn't happen by brushing the screen, like unlocking.
-  onHold?: () => void;
   children?: ReactNode;
 };
 
-function Tile({ entity, name, icon, tone, active, detail, onTap, onHold, children }: TileProps) {
+function Tile({ entity, name, icon, tone, active, detail, onTap, children }: TileProps) {
+  const showDetails = useContext(ShowDetails);
   const timer = useRef<number | undefined>(undefined);
   const held = useRef(false);
   const unavailable = entity.state === "unavailable";
-  const pressable = (onTap || onHold) && !unavailable;
+  const details = () => showDetails(entity.entity_id, name);
   const cancelHold = () => window.clearTimeout(timer.current);
 
   return (
     <div
       className="tile"
-      role={pressable ? "button" : undefined}
+      role={unavailable ? undefined : "button"}
       data-active={(active && !unavailable) || undefined}
       data-unavailable={unavailable || undefined}
       style={{ "--tone": tone } as CSSProperties}
       onPointerDown={() => {
         held.current = false;
-        if (pressable && onHold) {
-          timer.current = window.setTimeout(() => {
-            held.current = true;
-            onHold();
-          }, HOLD_MS);
-        }
+        if (unavailable) return;
+        timer.current = window.setTimeout(() => {
+          held.current = true;
+          details();
+        }, HOLD_MS);
       }}
       onPointerUp={cancelHold}
       onPointerCancel={cancelHold}
-      onClick={() => pressable && !held.current && onTap?.()}
+      onClick={() => !unavailable && !held.current && (onTap ?? details)()}
     >
       <Icon path={icon} />
       {children}
@@ -71,10 +75,6 @@ function Tile({ entity, name, icon, tone, active, detail, onTap, onHold, childre
       <div className="detail">{unavailable ? "Unavailable" : detail}</div>
     </div>
   );
-}
-
-function label(state: string): string {
-  return state.charAt(0).toUpperCase() + state.slice(1).replaceAll("_", " ");
 }
 
 function LightTile({ entity, name }: EntityProps) {
@@ -124,24 +124,13 @@ function FanTile({ entity, name }: EntityProps) {
   );
 }
 
-// What the device is doing right now, when it says; otherwise its mode.
-const HVAC_STATUS: Record<string, string> = {
-  heating: "Heating",
-  cooling: "Cooling",
-  drying: "Drying",
-  fan: "Fan",
-  idle: "Idle",
-  off: "Off",
-  heat_cool: "Heat/cool",
-  fan_only: "Fan only",
-};
-
 function ClimateTile({ entity, name }: EntityProps) {
   const { current_temperature, temperature, target_temp_low, target_temp_high, hvac_action } = entity.attributes;
   const { min_temp = 7, max_temp = 35, target_temp_step: step = 0.5 } = entity.attributes;
   const cooling = hvac_action === "cooling" || entity.state === "cool";
   const target = temperature ?? (target_temp_low != null ? `${target_temp_low}–${target_temp_high}` : undefined);
-  const status = HVAC_STATUS[hvac_action ?? entity.state] ?? label(entity.state);
+  // What the device is doing right now, when it says; otherwise its mode.
+  const status = stateLabel(hvac_action ?? entity.state);
   const nudge = (direction: number) => {
     const next = Math.min(max_temp, Math.max(min_temp, temperature + direction * step));
     callAction(entity, "set_temperature", { temperature: Number(next.toFixed(1)) });
@@ -159,20 +148,18 @@ function ClimateTile({ entity, name }: EntityProps) {
         .join(" · ")}
     >
       {temperature != null && entity.state !== "off" && (
-        <div className="stepper">
-          <button aria-label="Lower" onClick={() => nudge(-1)}>
-            <Icon path={mdiMinus} />
-          </button>
-          <button aria-label="Raise" onClick={() => nudge(1)}>
-            <Icon path={mdiPlus} />
-          </button>
+        // Pressing these is neither a tap on the tile nor the start of a long press.
+        <div className="stepper" onPointerDown={stopPropagation} onClick={stopPropagation}>
+          <RoundButton icon={mdiMinus} label="Lower" onClick={() => nudge(-1)} />
+          <RoundButton icon={mdiPlus} label="Raise" onClick={() => nudge(1)} />
         </div>
       )}
     </Tile>
   );
 }
 
-// Opening these from a stray tap would be a security problem, so they take a long press.
+// Opening these from a stray tap would be a security problem, so a tap opens the detail sheet,
+// where Open is a separate press.
 const SECURE_COVERS = ["door", "garage", "gate"];
 
 function CoverTile({ entity, name }: EntityProps) {
@@ -181,6 +168,8 @@ function CoverTile({ entity, name }: EntityProps) {
   const secure = SECURE_COVERS.includes(device_class ?? "");
   const icons = device_class === "garage" ? [mdiGarageOpen, mdiGarage] : [mdiWindowShutterOpen, mdiWindowShutter];
   const position = entity.state === "open" && current_position != null ? ` · ${current_position}%` : "";
+  // Some covers, like a pergola's louvres, only tilt.
+  const toggle = supports(entity, CoverFeature.OPEN | CoverFeature.CLOSE) ? "toggle" : "toggle_cover_tilt";
   return (
     <Tile
       entity={entity}
@@ -188,9 +177,8 @@ function CoverTile({ entity, name }: EntityProps) {
       icon={open ? icons[0] : icons[1]}
       tone="var(--cyan)"
       active={open}
-      detail={label(entity.state) + position + (secure && !open ? " · hold to open" : "")}
-      onTap={secure && !open ? undefined : () => callAction(entity, "toggle")}
-      onHold={secure && !open ? () => callAction(entity, "open_cover") : undefined}
+      detail={stateLabel(entity.state) + position}
+      onTap={secure && !open ? undefined : () => callAction(entity, toggle)}
     />
   );
 }
@@ -204,15 +192,17 @@ function LockTile({ entity, name }: EntityProps) {
       icon={locked ? mdiLock : mdiLockOpenVariant}
       tone="var(--red)"
       active={!locked}
-      detail={locked ? "Locked · hold to unlock" : label(entity.state)}
+      detail={stateLabel(entity.state)}
+      // Unlocking is done from the detail sheet, so it can't happen by brushing the screen.
       onTap={locked ? undefined : () => callAction(entity, "lock")}
-      onHold={locked ? () => callAction(entity, "unlock") : undefined}
     />
   );
 }
 
 function MediaTile({ entity, name }: EntityProps) {
   const { media_title, media_artist } = entity.attributes;
+  const playable =
+    entity.state !== "off" && (supports(entity, MediaFeature.PAUSE) || supports(entity, MediaFeature.PLAY));
   return (
     <Tile
       entity={entity}
@@ -220,8 +210,8 @@ function MediaTile({ entity, name }: EntityProps) {
       icon={mdiSpeaker}
       tone="var(--magenta)"
       active={entity.state === "playing"}
-      detail={media_title ? [media_title, media_artist].filter(Boolean).join(" · ") : label(entity.state)}
-      onTap={entity.state === "off" ? undefined : () => callAction(entity, "media_play_pause")}
+      detail={media_title ? [media_title, media_artist].filter(Boolean).join(" · ") : stateLabel(entity.state)}
+      onTap={playable ? () => callAction(entity, "media_play_pause") : undefined}
     />
   );
 }
@@ -236,6 +226,8 @@ const TILES: Record<string, (props: EntityProps) => ReactNode> = {
   media_player: MediaTile,
 };
 
+const stopPropagation = (event: { stopPropagation: () => void }) => event.stopPropagation();
+
 export function EntityTile({ entity, name }: EntityProps) {
   const DomainTile = TILES[entity.entity_id.split(".")[0]];
   if (DomainTile) return <DomainTile entity={entity} name={name} />;
@@ -246,7 +238,7 @@ export function EntityTile({ entity, name }: EntityProps) {
       icon={mdiHelpCircleOutline}
       tone="var(--accent)"
       active={false}
-      detail={label(entity.state)}
+      detail={stateLabel(entity.state)}
     />
   );
 }

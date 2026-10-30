@@ -44,6 +44,7 @@ type PanelConfig = { hassUrl?: string; token: string };
 
 let hass: Hass = { status: "connecting", entities: {}, placements: new Map() };
 let connection: Connection | undefined;
+let hassOrigin = location.origin;
 const listeners = new Set<() => void>();
 
 function update(changes: Partial<Hass>) {
@@ -56,8 +57,9 @@ export async function connect() {
     const response = await fetch("config.json", { cache: "no-store" });
     if (!response.ok) throw new Error(`config.json: ${await response.text()}`);
     const { hassUrl, token }: PanelConfig = await response.json();
+    if (hassUrl) hassOrigin = hassUrl;
     connection = await createConnection({
-      auth: createLongLivedTokenAuth(hassUrl ?? location.origin, token),
+      auth: createLongLivedTokenAuth(hassOrigin, token),
       setupRetry: -1,
     });
   } catch (error) {
@@ -127,6 +129,17 @@ export function callAction(entity: HassEntity, service: string, data?: object) {
   );
 }
 
+// Whether an entity has one of the bits in its supported_features, from Home Assistant's
+// *EntityFeature enums.
+export function supports(entity: HassEntity, feature: number): boolean {
+  return ((entity.attributes.supported_features ?? 0) & feature) !== 0;
+}
+
+// Pictures Home Assistant serves, like album art, have paths on Home Assistant's address.
+export function hassPicture(path: string): string {
+  return new URL(path, hassOrigin).href;
+}
+
 export function entityName(entity: HassEntity): string {
   return entity.attributes.friendly_name ?? entity.entity_id;
 }
@@ -134,4 +147,11 @@ export function entityName(entity: HassEntity): string {
 // Dates and times follow Home Assistant's language, country and time zone, not the panel's.
 export function locale(config?: HassConfig): string | undefined {
   return config && `${config.language}-${config.country ?? ""}`.replace(/-$/, "");
+}
+
+// States and modes as words: "fan_only" reads "Fan only".
+const LABELS: Record<string, string> = { heat_cool: "Heat/cool" };
+
+export function stateLabel(state: string): string {
+  return LABELS[state] ?? state.charAt(0).toUpperCase() + state.slice(1).replaceAll("_", " ");
 }
