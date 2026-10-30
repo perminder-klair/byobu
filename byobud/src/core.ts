@@ -29,6 +29,7 @@ export class Core {
   private listeners = new Set<(update: Update) => void>();
   panel: PanelSettings;
   themes: string[] = [];
+  version = "development";
   private outputs: Output[] = [];
   private microphone = false;
   private outputsTimer?: ReturnType<typeof setInterval>;
@@ -52,7 +53,6 @@ export class Core {
         this.discover(join(directory, entry.name));
       }
     }
-    this.sound.setVolume(this.panel.volume);
     this.refreshOutputs();
     // Speakers come and go, and nothing announces it.
     this.outputsTimer = setInterval(() => this.refreshOutputs(), OUTPUTS_REFRESH_MS);
@@ -62,6 +62,8 @@ export class Core {
   private async refreshOutputs() {
     const { outputs, microphone } = await this.sound.devices();
     if (JSON.stringify(outputs) === JSON.stringify(this.outputs) && microphone === this.microphone) return;
+    // At boot PipeWire isn't ready yet, and a new speaker comes up at its own volume.
+    if (outputs.length > 0) this.sound.setVolume(this.panel.volume);
     this.outputs = outputs;
     this.microphone = microphone;
     this.emit({ type: "outputs", outputs, microphone });
@@ -210,7 +212,7 @@ export class Core {
   }
 
   snapshot(): Snapshot {
-    return { plugins: this.summaries(), data: this.data, panel: this.panel, themes: this.themes, outputs: this.outputs, microphone: this.microphone, clients: this.clients.list() };
+    return { plugins: this.summaries(), data: this.data, panel: this.panel, themes: this.themes, outputs: this.outputs, microphone: this.microphone, clients: this.clients.list(), version: this.version };
   }
 
   async act(id: string, action: string, data: Record<string, unknown> | undefined, value: unknown) {

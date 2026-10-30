@@ -1,0 +1,6 @@
+#!/bin/bash
+# Starts byobud from the newest update if there is one, or else from what came with the image.
+app=/data/app/current
+[[ -f $app/byobud/byobud.mjs ]] || app=/usr/local/share/byobu
+export BYOBU_SHELL=$app/shell
+exec /usr/bin/node "$app/byobud/byobud.mjs"

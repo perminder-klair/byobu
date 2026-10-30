@@ -1,0 +1,58 @@
+#!/bin/bash
+# Runs once, early on the first boot. Makes a data partition from the rest of the card, moves
+# everything that changes onto it, and sets the root partition read-only from the next boot on.
+# Pulling the power can then only touch files that are meant to change. This boot stays writable,
+# as systemd and byobu-config have their own first-boot work to do on root.
+set -euo pipefail
+
+DATA=/data
+# Everything that changes while the panel runs.
+PATHS=(var/lib/byobu home/byobu var/lib/iwd var/lib/systemd var/lib/lastlog var/log var/cache)
+
+if [[ ! -e /dev/disk/by-label/BYOBU_DATA ]]; then
+  root=$(findmnt -no SOURCE /)
+  disk=/dev/$(lsblk -no PKNAME "$root")
+  # The disk is in use, so the kernel is told about the new partition by hand.
+  echo ',,L' | sfdisk --append --no-reread --quiet "$disk"
+  number=$(sfdisk --list --output Device "$disk" | grep -c "^$disk")
+  partx --add --nr "$number" "$disk"
+  udevadm settle
+  partition=$(lsblk --list --noheadings --paths --output NAME "$disk" | tail -1)
+  mkfs.ext4 -q -L BYOBU_DATA "$partition"
+  udevadm settle
+fi
+
+mkdir -p "$DATA"
+mountpoint -q "$DATA" || mount LABEL=BYOBU_DATA "$DATA"
+
+for path in "${PATHS[@]}"; do
+  if [[ ! -d $DATA/$path ]]; then
+    # Through a temporary name, so power lost halfway just starts this one over.
+    rm -rf "$DATA/$path.new"
+    mkdir -p "$DATA/$path.new"
+    cp -a "/$path/." "$DATA/$path.new/"
+    mv "$DATA/$path.new" "$DATA/$path"
+  fi
+done
+
+if ! grep -q BYOBU_DATA /etc/fstab; then
+  {
+    echo
+    echo "# Written by byobu-firstboot. Root is read-only, and what changes lives on the data partition."
+    echo "LABEL=byobu-root  /  ext4  ro,noatime  0  1"
+    # nofail: if the data partition ever dies, it still boots and answers SSH.
+    echo "LABEL=BYOBU_DATA  $DATA  ext4  defaults,noatime,nofail  0  2"
+    for path in "${PATHS[@]}"; do
+      echo "$DATA/$path  /$path  none  bind,nofail,x-systemd.requires-mounts-for=$DATA  0  0"
+    done
+    echo "tmpfs  /var/tmp  tmpfs  mode=1777,nosuid,nodev  0  0"
+  } >> /etc/fstab
+fi
+
+sed -i -E 's/(^| )rw( |$)/\1ro\2/' /boot/cmdline.txt
+
+for path in "${PATHS[@]}"; do
+  mountpoint -q "/$path" || mount --bind "$DATA/$path" "/$path"
+done
+
+touch /etc/byobu/data-ready

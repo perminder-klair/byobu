@@ -5,6 +5,12 @@
 # value is skipped with a warning rather than blocking the rest.
 set -euo pipefail
 
+# Root is read-only after the first boot.
+if findmnt -no OPTIONS / | grep -qw ro; then
+  mount -o remount,rw /
+  trap 'mount -o remount,ro /' EXIT
+fi
+
 CONF=/boot/byobu.conf
 KNOWN=" hostname timezone wifi_ssid wifi_password wifi_country ssh_key rotation url ha_url ha_token "
 

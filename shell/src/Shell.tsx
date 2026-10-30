@@ -36,13 +36,13 @@ export function Shell() {
   const far = power.state !== "near";
   const issue = problem(store);
   const sheetTile = sheet && findTile(store, sheet.plugin, sheet.id);
-  const theme = store.snapshot?.panel.theme;
+  const theme = store.snapshot?.panel;
   const firstTheme = useRef(true);
   useEffect(() => {
-    if (theme === undefined) return;
+    if (theme?.theme === undefined) return;
     if (!firstTheme.current) loadTheme();
     firstTheme.current = false;
-  }, [theme]);
+  }, [theme?.theme, theme?.themeStamp]);
 
   const stage = useRef<HTMLDivElement>(null);
   const pages = useRef<HTMLDivElement>(null);

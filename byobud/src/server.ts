@@ -1,7 +1,7 @@
 // byobud's HTTP side: the shell's files, and the API it talks to. The files are the same for
 // everyone and hold nothing private. The API takes either the panel's own browser, on localhost,
 // or a paired device. Plain HTTP on the home network, so a token is only as private as the Wi-Fi.
-import { createReadStream, existsSync, readdirSync, statSync } from "node:fs";
+import { createReadStream, existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { networkInterfaces } from "node:os";
 import { extname, join, normalize } from "node:path";
@@ -24,11 +24,12 @@ const TYPES: Record<string, string> = {
 };
 
 const MAX_BODY = 64 * 1024;
+const MAX_THEME = 4 * 1024 * 1024;
 const COOKIE = "byobu_client";
 // Ten years: a phone stays paired until it's removed in Settings.
 const COOKIE_SECONDS = 10 * 365 * 24 * 3600;
 
-export type Paths = { shell: string; themes: string; defaultTheme: string };
+export type Paths = { shell: string; themes: string; defaultTheme: string; pushedTheme: string };
 
 // The client's fault, so not worth a stack trace in the log.
 class BadRequest extends Error {}
@@ -42,7 +43,7 @@ function fail(res: ServerResponse, status: number, message: string) {
   res.writeHead(status, { "Content-Type": "text/plain" }).end(message);
 }
 
-async function readBody(req: IncomingMessage): Promise<Record<string, unknown>> {
+async function readBody(req: IncomingMessage, limit = MAX_BODY): Promise<Record<string, unknown>> {
   // A plain form or a cross-site page can't send this type without asking first, and nothing
   // here answers when it asks.
   if (!req.headers["content-type"]?.startsWith("application/json")) throw new BadRequest("Expected JSON");
@@ -50,14 +51,15 @@ async function readBody(req: IncomingMessage): Promise<Record<string, unknown>> 
   let size = 0;
   for await (const chunk of req as AsyncIterable<Buffer>) {
     size += chunk.length;
-    if (size > MAX_BODY) throw new BadRequest("Too long");
+    if (size > limit) throw new BadRequest("Too long");
     chunks.push(chunk);
   }
   return JSON.parse(Buffer.concat(chunks).toString() || "{}");
 }
 
 function themeFile(paths: Paths, theme: string, name: string): string {
-  const chosen = theme && /^[\w.-]+$/.test(theme) ? join(paths.themes, theme, name) : "";
+  const folder = theme === "desktop" ? paths.pushedTheme : join(paths.themes, theme);
+  const chosen = theme && /^[\w.-]+$/.test(theme) ? join(folder, name) : "";
   return chosen && existsSync(chosen) ? chosen : join(paths.defaultTheme, name);
 }
 
@@ -83,7 +85,7 @@ function lanAddress(req: IncomingMessage): string {
   return lan?.address ?? req.headers.host?.split(":")[0] ?? "localhost";
 }
 
-async function api(core: Core, req: IncomingMessage, res: ServerResponse, path: string, port: number) {
+async function api(core: Core, req: IncomingMessage, res: ServerResponse, path: string, port: number, paths: Paths) {
   const [, , route, id, sub, name] = path.split("/");
 
   if (req.method === "POST" && route === "pair") {
@@ -108,6 +110,17 @@ async function api(core: Core, req: IncomingMessage, res: ServerResponse, path: 
 
   if (req.method === "DELETE" && route === "clients" && id) {
     core.removeClient(id);
+    return res.writeHead(204).end();
+  }
+
+  // A desktop pushing the theme it's on.
+  if (req.method === "PUT" && route === "theme") {
+    const { css, wallpaper } = await readBody(req, MAX_THEME);
+    if (typeof css !== "string" || !css.includes(":root") || typeof wallpaper !== "string") return fail(res, 400, "Expected css and wallpaper");
+    mkdirSync(paths.pushedTheme, { recursive: true });
+    writeFileSync(join(paths.pushedTheme, "theme.css"), css);
+    writeFileSync(join(paths.pushedTheme, "wallpaper.jpg"), Buffer.from(wallpaper, "base64"));
+    core.updatePanel({ theme: "desktop", themeStamp: Date.now() });
     return res.writeHead(204).end();
   }
 
@@ -173,7 +186,7 @@ export function startServer(core: Core, paths: Paths, port: number, address: str
   const server = createServer((req, res) => {
     const path = new URL(req.url ?? "/", "http://localhost").pathname;
     if (path.startsWith("/api/")) {
-      api(core, req, res, path, port).catch((error) => {
+      api(core, req, res, path, port, paths).catch((error) => {
         if (error instanceof BadRequest) return fail(res, 400, error.message);
         console.error(`${req.method} ${path} failed:`, error);
         if (!res.headersSent) fail(res, 500, String(error));

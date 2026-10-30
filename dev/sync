@@ -16,6 +16,11 @@ echo "==> Building the shell and byobud"
 (cd shell && pnpm -s build --logLevel warn)
 (cd byobud && pnpm -s build)
 
+# Root is read-only on a panel past its first boot, and a release installed with byobu-update
+# takes priority over what's copied here, so it's removed below.
+ssh "$PANEL" "mount -o remount,rw /"
+trap 'ssh "$PANEL" "findmnt -no OPTIONS /data >/dev/null && mount -o remount,ro /" || true' EXIT
+
 echo "==> Installing packages"
 ssh "$PANEL" "pacman -S --needed --noconfirm $(grep -Ev '^(#|$)' builder/packages.txt | tr '\n' ' ')" 2>&1 |
   grep -vE '^(warning: .* is up to date -- skipping| there is nothing to do)$' || true
@@ -44,4 +49,5 @@ fi
 echo "==> Restarting the kiosk"
 ssh "$PANEL" "systemctl daemon-reload && udevadm control --reload &&
   udevadm trigger --subsystem-match=backlight --action=add &&
-  systemctl enable byobud.service && systemctl restart byobud byobu-kiosk"
+  systemctl enable byobu-firstboot.service byobud.service &&
+  rm -f /data/app/current && systemctl restart byobud byobu-kiosk"

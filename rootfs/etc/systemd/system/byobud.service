@@ -12,9 +12,12 @@ StateDirectoryMode=0750
 # The kiosk user's session, for PipeWire and media players. byobu is uid 1000.
 Environment=XDG_RUNTIME_DIR=/run/user/1000
 Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
-ExecStart=/usr/bin/node /usr/local/share/byobu/byobud/byobud.mjs
+ExecStart=/usr/local/bin/byobud-start
 Restart=always
 RestartSec=2
+# byobud saves as it goes, and shairport-sync can hang stopping, so what's left is killed at once.
+KillMode=mixed
+TimeoutStopSec=5
 ProtectSystem=strict
 # Rather than ProtectHome, which also hides the session in /run/user.
 InaccessiblePaths=/home /root

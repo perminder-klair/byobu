@@ -1,0 +1,94 @@
+#!/bin/bash
+# Updates the panel.
+#
+#   byobu-update              the shell and byobud, to the latest release
+#   byobu-update <file|url>   the shell and byobud, from a release tarball
+#   byobu-update --os         the system's own packages
+#
+# The shell and byobud live side by side on the data partition, so an update never touches the
+# read-only root. If a new version doesn't come up healthy, the old one is put back.
+set -euo pipefail
+
+RELEASES=https://github.com/perminder-klair/byobu/releases/latest/download/byobu-app.tar.gz
+APPS=/data/app
+HEALTHY_WITHIN=45
+KEEP=3
+
+say() { echo "byobu-update: $*"; }
+die() { say "$*" >&2; exit 1; }
+
+healthy() {
+  local _
+  for _ in $(seq "$HEALTHY_WITHIN"); do
+    if curl -fs -m 2 -o /dev/null http://127.0.0.1:8080/api/me; then return 0; fi
+    sleep 1
+  done
+  return 1
+}
+
+update_os() {
+  mount -o remount,rw /
+  trap 'mount -o remount,ro / || true' EXIT
+  pacman -Syu --noconfirm
+  say "done. Reboot to finish."
+}
+
+update_app() {
+  local source=$1 tarball version previous
+  # Not local: the trap runs after this function has returned.
+  work=$(mktemp -d)
+  trap 'rm -rf "$work"' EXIT
+  tarball=$work/app.tar.gz
+
+  if [[ $source == http* ]]; then
+    curl -fsSL -o "$tarball" "$source"
+    curl -fsSL -o "$tarball.sha256" "$source.sha256"
+    (cd "$work" && sed 's/ .*/  app.tar.gz/' app.tar.gz.sha256 | sha256sum --check --quiet) || die "the download doesn't match its checksum"
+  else
+    cp "$source" "$tarball"
+  fi
+
+  tar -C "$work" -xzf "$tarball"
+  [[ -f $work/app/byobud/byobud.mjs && -f $work/app/shell/index.html && -f $work/app/version ]] || die "that isn't a release"
+  version=$(cat "$work/app/version")
+  [[ $version =~ ^[A-Za-z0-9._-]+$ ]] || die "bad version"
+
+  mkdir -p "$APPS"
+  previous=$(readlink "$APPS/current" 2>/dev/null || true)
+  if [[ $previous == "$version" ]]; then
+    say "already on $version"
+    return
+  fi
+  rm -rf "${APPS:?}/$version"
+  mv "$work/app" "$APPS/$version"
+  chown -R root:root "$APPS/$version"
+  ln -sfn "$version" "$APPS/current"
+
+  systemctl restart byobud
+  if healthy; then
+    systemctl restart byobu-kiosk
+    say "now on $version"
+    # Old versions, oldest first, leaving a few to go back to.
+    find "$APPS" -mindepth 1 -maxdepth 1 -type d -printf '%T@ %f\n' | sort -n | head -n "-$KEEP" | cut -d' ' -f2 |
+      while read -r old; do [[ $old == "$version" ]] || rm -rf "${APPS:?}/$old"; done
+    return
+  fi
+
+  say "$version didn't come up, going back"
+  if [[ -n $previous ]]; then
+    ln -sfn "$previous" "$APPS/current"
+  else
+    rm -f "$APPS/current"
+  fi
+  rm -rf "${APPS:?}/$version"
+  systemctl restart byobud
+  healthy || die "the old version isn't healthy either: check journalctl -u byobud"
+  die "stayed on ${previous:-the version the image came with}"
+}
+
+[[ $EUID -eq 0 ]] || die "run this as root"
+case ${1:-} in
+  --os) update_os ;;
+  "") update_app "$RELEASES" ;;
+  *) update_app "$1" ;;
+esac

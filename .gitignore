@@ -10,3 +10,4 @@ node_modules/
 # byobud's settings while developing, with the dev Home Assistant's token
 /dev/state/
 /byobud/dist/
+/release/

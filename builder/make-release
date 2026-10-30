@@ -1,0 +1,19 @@
+#!/bin/bash
+# Packs the shell and byobud into a tarball that byobu-update can install, with its checksum.
+#
+#   builder/make-release     writes release/byobu-app.tar.gz and release/byobu-app.tar.gz.sha256
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+[[ -f shell/dist/index.html && -f byobud/dist/byobud.mjs ]] \
+  || { echo "make-release: build the shell and byobud first" >&2; exit 1; }
+
+work=$(mktemp -d)
+trap 'rm -rf "$work"' EXIT
+mkdir -p "$work/app" release
+cp -r shell/dist "$work/app/shell"
+cp -r byobud/dist "$work/app/byobud"
+git describe --always --dirty > "$work/app/version"
+tar -C "$work" --owner=root --group=root -czf release/byobu-app.tar.gz app
+(cd release && sha256sum byobu-app.tar.gz > byobu-app.tar.gz.sha256)
+echo "release/byobu-app.tar.gz: $(cat "$work/app/version")"

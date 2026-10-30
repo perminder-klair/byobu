@@ -26,8 +26,8 @@ Current target: Raspberry Pi 4 with the 7" Touch Display 2, rotated to landscape
    plugin settings, with nothing to install.
 7. **Assistant** (done). A prompt line and hold to talk, with Claude. Its tools are what the plugins
    already publish, and its answers come back as live tiles.
-8. **Robustness.** Persistent data partition, read-only root, an update command, and a theme
-   that follows the desktop.
+8. **Robustness** (done). A data partition for everything that changes, a read-only root, an update
+   command that goes back by itself if a new version fails, and a theme that follows the desktop.
 
 ## Building an image
 
@@ -109,6 +109,35 @@ To talk to it, plug in a microphone and set a speech server: anything with OpenA
 which includes Whisper servers you can run on your own network. Hold the microphone button to talk,
 and set a speaking model for spoken replies.
 
+## Power cuts and updates
+
+The first boot takes a minute or two longer: it makes a data partition from the rest of the card
+and moves everything that changes onto it, including settings, logs, Wi-Fi and the browser's
+profile. From the next boot on the system itself is read-only, so pulling the plug can't damage it.
+A setting changed in the last few seconds before the power goes may go back to its old value. If
+the data partition ever fails it still boots and answers SSH, without your settings.
+
+On the panel, as root:
+
+```sh
+byobu-update              # the shell and byobud, to the latest release
+byobu-update <file|url>   # the same, from a tarball
+byobu-update --os         # the system's packages, then reboot
+```
+
+An update checks its download, installs beside the current version, and goes back by itself if the
+new one isn't answering within 45 seconds. The last few versions stay in `/data/app`. To publish
+one, run `builder/make-release` and attach both files in `release/` to a GitHub release. To change
+something on the system by hand, `mount -o remount,rw /` first; the next boot makes it read-only
+again.
+
+## Following your desktop's theme
+
+On an Omarchy desktop, `dev/follow-theme <panel address>` pairs the desktop with the panel and adds
+a hook, so changing theme there changes the panel too, wallpaper included. It's From my desktop in
+Settings. If the panel is off it catches up at the next change. Delete
+`~/.config/omarchy/hooks/theme-set.d/byobu` to stop, and remove the desktop in Settings, under Phones.
+
 ## Writing a plugin
 
 A plugin is a folder with a `manifest.json` and an `index.mjs`. Drop one in
@@ -189,7 +218,8 @@ back. Nothing listens on the network, so the desktop's firewall can stay as it i
 
 `dev/sync <panel address>` brings a running panel up to date with the checkout instead of
 flashing a new image: packages, everything in `rootfs/` except the boot partition, the shell and
-byobud builds, and the desktop's themes. Settings on the panel are left alone.
+byobud builds, and the desktop's themes. Settings on the panel are left alone, and any release
+installed with `byobu-update` is set aside so the checkout's build runs.
 
 On the panel, byobud serves the shell and its API on port 8080. Plugins run inside it, so the
 browser never holds a token. The API answers the panel's own browser on localhost and paired
@@ -216,7 +246,8 @@ of a Home Assistant profile. A user just for the panel keeps it separate from yo
 They become the Home Assistant plugin's settings, readable only by byobud, and can be changed in
 Settings. A long token is easier to set here than on the on-screen keyboard.
 
-Access is SSH as root, by key only. There's no mDNS yet, so find the panel's IP on your router.
+Access is SSH as root, by key only. The panel is on your network as `byobu.local`, or whatever
+hostname you set.
 
 ## First boot checklist
 

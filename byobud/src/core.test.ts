@@ -90,3 +90,21 @@ test("a plugin with a bad manifest is skipped", async () => {
   assert.deepEqual(core.summaries().map(({ id }) => id), ["fine"]);
   await core.stop();
 });
+
+test("the volume is applied once there's something to apply it to", async () => {
+  const volumes: number[] = [];
+  let outputs: { id: string; name: string; selected: boolean }[] = [];
+  const root = mkdtempSync(join(tmpdir(), "byobud-"));
+  const core = new Core(join(root, "state"), {
+    setVolume: (percent) => volumes.push(percent),
+    chime: () => {},
+    devices: async () => ({ outputs, microphone: false }),
+    select: async () => {},
+  });
+  await core.start([root]);
+  assert.deepEqual(volumes, [], "nothing to set it on yet");
+  outputs = [{ id: "1", name: "Speaker", selected: true }];
+  await core.selectOutput("1");
+  assert.deepEqual(volumes, [50]);
+  await core.stop();
+});

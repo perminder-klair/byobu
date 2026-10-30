@@ -10,8 +10,8 @@ passwd -l root >/dev/null
 # The kiosk runs as an unprivileged user with no login shell.
 useradd -m -G video,render,input,audio -s /usr/bin/nologin byobu
 
-systemctl enable avahi-daemon.service byobu-config.service byobud.service byobu-kiosk.service \
-  iwd.service nqptp.service sshd.service
+systemctl enable avahi-daemon.service byobu-config.service byobu-firstboot.service byobud.service \
+  byobu-kiosk.service iwd.service nqptp.service sshd.service
 systemctl set-default graphical.target
 
 # byobu-config does first-boot setup, so systemd-firstboot's console prompt would only hold up
@@ -20,6 +20,8 @@ systemctl set-default graphical.target
 # ALARM packages are signed by archlinuxarm-keyring instead.
 systemctl mask systemd-firstboot.service systemd-networkd-wait-online.service \
   archlinux-keyring-wkd-sync.timer
+
+mkdir -p /data
 
 # The kiosk user's services, like PipeWire, run from boot rather than from the first login.
 mkdir -p /var/lib/systemd/linger

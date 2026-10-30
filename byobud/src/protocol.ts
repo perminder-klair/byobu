@@ -189,8 +189,10 @@ export type PanelSettings = {
   night: "auto" | "on" | "off";
   // Minutes without a touch before the screen turns off, or 0 to leave it on.
   blankAfter: number;
-  // A theme's name, or "" for the one the panel was set up with.
+  // A theme's name, "" for the one the panel was set up with, or "desktop" for one pushed to it.
   theme: string;
+  // Changes when a pushed theme does, so clients know to load it again.
+  themeStamp: number;
   // Which faces show, in order.
   faces: string[];
   // The tile in Modular's main window and the three beneath it. Empty picks by itself.
@@ -240,6 +242,7 @@ export type Snapshot = {
   outputs: Output[];
   microphone: boolean;
   clients: ClientSummary[];
+  version: string;
 };
 
 export type KeyedData = Omit<PluginData, "tiles" | "players" | "cameras" | "timers" | "alerts"> & {

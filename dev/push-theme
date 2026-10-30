@@ -1,0 +1,14 @@
+#!/bin/bash
+# Sends this desktop's current Omarchy theme and wallpaper to the panel set up by dev/follow-theme.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+# shellcheck disable=SC1091 # Written by dev/follow-theme.
+source "${XDG_CONFIG_HOME:-$HOME/.config}/byobu/panel"
+current=~/.local/state/omarchy/current
+
+css=$(rootfs/usr/local/bin/byobu-theme < "$current/theme/colors.toml")
+wallpaper=$(magick "$current/background" -resize '1280x720^' -gravity center -extent 1280x720 -strip -quality 80 jpg:- | base64 -w0)
+printf '{"css": %s, "wallpaper": "%s"}' "$(printf '%s' "$css" | node -e 'process.stdout.write(JSON.stringify(require("fs").readFileSync(0, "utf8")))')" "$wallpaper" |
+  curl -fsS -m 30 -o /dev/null -X PUT -H 'Content-Type: application/json' -H "Authorization: Bearer ${token:?}" \
+    --data-binary @- "http://${address:?}:8080/api/theme"

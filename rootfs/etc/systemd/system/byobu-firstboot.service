@@ -1,0 +1,16 @@
+# See byobu-firstboot. Runs before anything starts using the paths it moves.
+[Unit]
+Description=Byōbu first boot: data partition and read-only root
+DefaultDependencies=no
+ConditionPathExists=!/etc/byobu/data-ready
+After=local-fs.target systemd-udevd.service systemd-udev-trigger.service
+Before=sysinit.target systemd-journal-flush.service byobu-config.service byobud.service
+Conflicts=shutdown.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/byobu-firstboot
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target

@@ -12,6 +12,7 @@ export const PANEL_DEFAULTS: PanelSettings = {
   night: "auto",
   blankAfter: 30,
   theme: "",
+  themeStamp: 0,
   faces: ["modular", "clock", "weather", "music", "cameras"],
   modular: { main: "", tiles: [] },
 };

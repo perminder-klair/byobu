@@ -1,0 +1,24 @@
+#!/bin/bash
+# Makes a panel follow this desktop's Omarchy theme. Pairs with the panel over SSH, keeps the
+# token in ~/.config/byobu/panel, and adds a hook that pushes the theme whenever it changes.
+#
+#   dev/follow-theme 192.168.1.162
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+ADDRESS=${1:?usage: dev/follow-theme <panel address>}
+CONFIG=${XDG_CONFIG_HOME:-$HOME/.config}
+HOOK=$CONFIG/omarchy/hooks/theme-set.d/byobu
+
+code=$(ssh "root@$ADDRESS" "curl -s -X POST http://127.0.0.1:8080/api/pairing" | sed -E 's/.*#([0-9a-f]+)".*/\1/')
+cookie=$(curl -si -X POST -H 'Content-Type: application/json' -d "{\"code\": \"$code\", \"name\": \"$(hostname)\"}" \
+  "http://$ADDRESS:8080/api/pair" | sed -nE 's/^[Ss]et-[Cc]ookie: byobu_client=([0-9a-f]+).*/\1/p')
+[[ -n $cookie ]] || { echo "follow-theme: pairing failed" >&2; exit 1; }
+
+mkdir -p "$CONFIG/byobu" "$(dirname "$HOOK")"
+(umask 077; printf 'address=%s\ntoken=%s\n' "$ADDRESS" "$cookie" > "$CONFIG/byobu/panel")
+# Omarchy waits for its hooks mid-switch, so a panel that's off mustn't hold the desktop up.
+printf '#!/bin/bash\n%q >/dev/null 2>&1 &\n' "$PWD/dev/push-theme" > "$HOOK"
+chmod +x "$HOOK"
+dev/push-theme
+echo "The panel now follows this desktop's theme. Remove $HOOK to stop."

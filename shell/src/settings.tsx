@@ -111,7 +111,8 @@ function Toggles({ label, options, on, onChange }: { label: string; options: { v
 export function ThemeSettings() {
   const { panel, themes = [] } = useStore().snapshot ?? {};
   if (!panel) return null;
-  const options = [{ value: "", label: "As set up" }, ...themes.map((theme) => ({ value: theme, label: theme }))];
+  const pushed = panel.themeStamp ? [{ value: "desktop", label: "From my desktop" }] : [];
+  const options = [{ value: "", label: "As set up" }, ...pushed, ...themes.map((theme) => ({ value: theme, label: theme }))];
   return <Choices label="Theme" options={options} value={panel.theme} onChange={(theme) => updatePanel({ theme })} />;
 }
 
@@ -257,6 +258,11 @@ export function PluginSettings({ plugin }: { plugin: PluginSummary }) {
   );
 }
 
+function About() {
+  const { version } = useStore().snapshot ?? {};
+  return <div className="dim">Byōbu {version}</div>;
+}
+
 export function PhoneSettings() {
   const clients = useStore().snapshot?.clients ?? [];
   const onPhone = useContext(OnPhone);
@@ -307,7 +313,12 @@ export function SettingsApp() {
         ))}
       </div>
       <div className="settings scroll">
-        {page === "display" && <PanelControls />}
+        {page === "display" && (
+          <>
+            <PanelControls />
+            <About />
+          </>
+        )}
         {page === "theme" && <ThemeSettings />}
         {page === "faces" && <FaceSettings />}
         {page === "phones" && <PhoneSettings />}
