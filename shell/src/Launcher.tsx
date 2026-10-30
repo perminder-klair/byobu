@@ -6,7 +6,8 @@ import { type App } from "./apps";
 import { eventTime, useClock } from "./clock";
 import { Icon } from "./Icon";
 import { Nav } from "./nav";
-import { activePlayer, agenda, firstWeather, locale, useStore } from "./store";
+import { activePlayer, agenda, firstWeather, locale, timers, useStore } from "./store";
+import { Countdown } from "./timers";
 import { condition, degrees } from "./weather";
 import { Win, WinButton } from "./Win";
 
@@ -27,8 +28,17 @@ function Widgets() {
   const player = activePlayer(store);
   const weather = firstWeather(store);
   const [next] = agenda(store);
+  const [timer] = timers(store);
   return (
     <div className="widgets">
+      {timer && (
+        <WinButton title="timer" number={4} className="widget" onClick={() => openApp("timers")}>
+          <span className="value">
+            <Countdown timer={timer} />
+          </span>
+          <span className="dim">{timer.label}</span>
+        </WinButton>
+      )}
       {player && (
         <WinButton title="music" number={1} className="widget" onClick={() => openFace("music")}>
           <span className="value">{player.title}</span>

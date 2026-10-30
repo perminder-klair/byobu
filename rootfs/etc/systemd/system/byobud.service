@@ -2,20 +2,26 @@
 # /var/lib/byobu. See byobud/ in the source.
 [Unit]
 Description=Byōbu service
-After=network.target byobu-config.service
+After=network.target byobu-config.service avahi-daemon.service user@1000.service
+Wants=user@1000.service
 
 [Service]
 User=byobu
 StateDirectory=byobu
 StateDirectoryMode=0750
+# The kiosk user's session, for PipeWire and media players. byobu is uid 1000.
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
 ExecStart=/usr/bin/node /usr/local/share/byobu/byobud/byobud.mjs
 Restart=always
 RestartSec=2
 ProtectSystem=strict
-ProtectHome=yes
+# Rather than ProtectHome, which also hides the session in /run/user.
+InaccessiblePaths=/home /root
 PrivateTmp=yes
 NoNewPrivileges=yes
-RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# AF_NETLINK and AF_PACKET are how the receivers find the network interface and its address.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK AF_PACKET
 
 [Install]
 WantedBy=graphical.target

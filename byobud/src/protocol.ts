@@ -71,7 +71,7 @@ export type Tile = {
   // Where it lives, by name. Things in no room are listed under Other.
   room?: string;
   // Which app it belongs to, for things that aren't controls in a room.
-  kind?: "scene" | "media" | "summary";
+  kind?: "scene" | "media" | "summary" | "timer";
   // What a tap does. With neither, a tap opens the sheet, which is also how anything that
   // shouldn't happen by brushing the screen, like unlocking, is done.
   tap?: Action;
@@ -131,6 +131,14 @@ export type Camera = { id: string; name: string; picture: string };
 
 export type Locale = { language: string; timeZone?: string };
 
+// A countdown. Any client can draw it from endsAt without being told about every second.
+export type Timer = { id: string; label: string; endsAt: string; seconds: number; actions: Button[] };
+
+// Something that needs attention now. It wakes the panel and stays until an action clears it.
+export type Alert = { id: string; title: string; detail?: string; icon: string; tone: Tone; actions: Button[] };
+
+export type Output = { id: string; name: string; selected: boolean };
+
 // Everything a plugin can publish. Anything left out stays as it was.
 export type PluginData = {
   tiles?: Tile[];
@@ -140,6 +148,8 @@ export type PluginData = {
   weather?: Weather;
   players?: Player[];
   cameras?: Camera[];
+  timers?: Timer[];
+  alerts?: Alert[];
   locale?: Locale;
 };
 
@@ -147,6 +157,7 @@ export type PluginStatus = { state: "off" | "starting" | "ok" | "error"; message
 
 export type PanelSettings = {
   brightness: number;
+  volume: number;
   night: "auto" | "on" | "off";
   // Minutes without a touch before the screen turns off, or 0 to leave it on.
   blankAfter: number;
@@ -192,15 +203,19 @@ export type Snapshot = {
   data: Record<string, KeyedData>;
   panel: PanelSettings;
   themes: string[];
+  outputs: Output[];
 };
 
-export type KeyedData = Omit<PluginData, "tiles" | "players" | "cameras"> & {
+export type KeyedData = Omit<PluginData, "tiles" | "players" | "cameras" | "timers" | "alerts"> & {
   tiles?: Record<string, Tile>;
   players?: Record<string, Player>;
   cameras?: Record<string, Camera>;
+  timers?: Record<string, Timer>;
+  alerts?: Record<string, Alert>;
 };
 
 export type Update =
   | { type: "data"; plugin: string; key: keyof PluginData; id?: string; value: unknown }
   | { type: "plugins"; plugins: PluginSummary[] }
-  | { type: "panel"; panel: PanelSettings };
+  | { type: "panel"; panel: PanelSettings }
+  | { type: "outputs"; outputs: Output[] };

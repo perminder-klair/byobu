@@ -13,3 +13,6 @@ arm_boost=1
 # The panel is rotated by the compositor and touch by libinput (/etc/byobu/rotation), not here.
 display_auto_detect=0
 dtoverlay=vc4-kms-dsi-ili9881-7inch
+
+# The 3.5 mm jack, for a speaker.
+dtparam=audio=on

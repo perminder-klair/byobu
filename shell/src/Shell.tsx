@@ -1,16 +1,19 @@
 // The whole screen: the bar, the faces you swipe between, and the home screen you swipe up to.
 // Swipes are native scrolling with snap points, which the GPU runs by itself. A drag handled in
 // JavaScript would need the main thread for every frame.
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useApps } from "./apps";
 import { Bar } from "./Bar";
+import { ActionButton } from "./controls";
 import { useFaces } from "./faces";
+import { Icon } from "./Icon";
 import { Launcher } from "./Launcher";
 import { Nav } from "./nav";
 import { usePower, wake } from "./power";
 import { PanelControls } from "./settings";
-import { SheetFrame, ShowSheet, TileSheet } from "./Sheet";
-import { activePlayer, findTile, problem, useStore, type Placed, type Tile } from "./store";
+import { SheetFrame, ShowSheet, TileSheet, toneColour } from "./Sheet";
+import { act, activePlayer, alerts, findTile, problem, useStore, type Placed, type Tile } from "./store";
+
 import { loadTheme } from "./theme";
 
 export function Shell() {
@@ -81,6 +84,12 @@ export function Shell() {
       down.removeEventListener("scrollsnapchange", landedOnPage);
     };
   }, []);
+
+  // Something needing attention wakes the screen, from anything short of an empty room.
+  const alert = alerts(store)[0];
+  useEffect(() => {
+    if (alert) wake();
+  }, [alert?.id]);
 
   const closeSheet = useCallback(() => setSheet(undefined), []);
   const closePanelSheet = useCallback(() => setPanelSheet(false), []);
@@ -156,6 +165,20 @@ export function Shell() {
             <SheetFrame title="Panel" subtitle="This screen" tone="var(--accent)" onClose={closePanelSheet}>
               <PanelControls />
             </SheetFrame>
+          )}
+          {alert && (
+            <div className="overlay alert" style={{ "--tone": toneColour(alert.tone) } as CSSProperties}>
+              <div className="sheet">
+                <Icon path={alert.icon} />
+                <div className="sheet-name">{alert.title}</div>
+                {alert.detail && <div className="sheet-state">{alert.detail}</div>}
+                <div className="actions">
+                  {alert.actions.map(({ icon, label, selected, action }) => (
+                    <ActionButton key={label} icon={icon} label={label} selected={selected} onClick={() => act(alert.plugin, action)} />
+                  ))}
+                </div>
+              </div>
+            </div>
           )}
           {issue && <div className="status">{issue}</div>}
           <div className="blank" />

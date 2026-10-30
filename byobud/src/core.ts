@@ -1,13 +1,15 @@
 // Runs the plugins and holds what they've published. Clients get a snapshot, then only what
 // changed, so a plugin can publish everything every time.
-import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { Host, Manifest, Plugin, PluginInstance } from "./plugin.ts";
-import type { KeyedData, PanelSettings, PluginData, PluginStatus, PluginSummary, Snapshot, Update } from "./protocol.ts";
+import type { KeyedData, Output, PanelSettings, PluginData, PluginStatus, PluginSummary, Snapshot, Update } from "./protocol.ts";
 import { applyValues, loadPanel, loadPlugin, redact, savePanel, savePlugin, withDefaults, type PluginRecord } from "./settings.ts";
+import { silent, type Sound } from "./sound.ts";
 
-const KEYED = ["tiles", "players", "cameras"] as const;
+const KEYED = ["tiles", "players", "cameras", "timers", "alerts"] as const;
+const OUTPUTS_REFRESH_MS = 10_000;
 const ENTRY_NAMES = ["index.mjs", "index.js", "index.ts"];
 
 type Loaded = {
@@ -26,10 +28,14 @@ export class Core {
   private listeners = new Set<(update: Update) => void>();
   panel: PanelSettings;
   themes: string[] = [];
+  private outputs: Output[] = [];
+  private outputsTimer?: ReturnType<typeof setInterval>;
   private readonly state: string;
+  private readonly sound: Sound;
 
-  constructor(state: string) {
+  constructor(state: string, sound: Sound = silent) {
     this.state = state;
+    this.sound = sound;
     this.panel = loadPanel(state);
   }
 
@@ -42,7 +48,23 @@ export class Core {
         this.discover(join(directory, entry.name));
       }
     }
+    this.sound.setVolume(this.panel.volume);
+    this.refreshOutputs();
+    // Speakers come and go, and nothing announces it.
+    this.outputsTimer = setInterval(() => this.refreshOutputs(), OUTPUTS_REFRESH_MS);
     await Promise.all([...this.plugins.keys()].map((id) => this.startPlugin(id)));
+  }
+
+  private async refreshOutputs() {
+    const outputs = await this.sound.outputs();
+    if (JSON.stringify(outputs) === JSON.stringify(this.outputs)) return;
+    this.outputs = outputs;
+    this.emit({ type: "outputs", outputs });
+  }
+
+  async selectOutput(id: string) {
+    await this.sound.select(id);
+    await this.refreshOutputs();
   }
 
   private discover(directory: string) {
@@ -69,12 +91,21 @@ export class Core {
     const generation = ++plugin.generation;
     const current = () => plugin.generation === generation;
     this.setStatus(plugin, { state: "starting" });
+    const directory = join(this.state, "plugins", id);
+    mkdirSync(directory, { recursive: true });
     const host: Host = {
       settings: withDefaults(plugin.manifest.schema ?? [], plugin.record.values),
       publish: (data) => current() && this.publish(id, data),
       status: (state, message) => current() && this.setStatus(plugin, { state, message }),
       log: (...args) => console.log(`[${id}]`, ...args),
       pictureUrl: (path) => `/api/pictures/${id}/${encodeURIComponent(path)}`,
+      directory,
+      stored: plugin.record.stored,
+      store: (value) => {
+        plugin.record.stored = value;
+        savePlugin(this.state, id, plugin.record);
+      },
+      chime: () => this.sound.chime(),
     };
     try {
       const entry = ENTRY_NAMES.map((name) => join(plugin.directory, name)).find(existsSync);
@@ -171,7 +202,7 @@ export class Core {
   }
 
   snapshot(): Snapshot {
-    return { plugins: this.summaries(), data: this.data, panel: this.panel, themes: this.themes };
+    return { plugins: this.summaries(), data: this.data, panel: this.panel, themes: this.themes, outputs: this.outputs };
   }
 
   async act(id: string, action: string, data: Record<string, unknown> | undefined, value: unknown) {
@@ -202,10 +233,12 @@ export class Core {
   updatePanel(changes: Partial<PanelSettings>) {
     this.panel = { ...this.panel, ...changes };
     savePanel(this.state, this.panel);
+    if (changes.volume !== undefined) this.sound.setVolume(changes.volume);
     this.emit({ type: "panel", panel: this.panel });
   }
 
   async stop() {
+    clearInterval(this.outputsTimer);
     await Promise.all([...this.plugins.keys()].map((id) => this.stopPlugin(id)));
   }
 }

@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "timers",
+  "name": "Timers",
+  "version": "1.0.0",
+  "description": "Kitchen timers. They carry on through a restart, and when one ends it wakes the panel and chimes until you dismiss it.",
+  "enabledByDefault": true
+}

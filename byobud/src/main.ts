@@ -4,6 +4,7 @@
 import { join } from "node:path";
 import { Core } from "./core.ts";
 import { listThemes, startServer } from "./server.ts";
+import { createSound } from "./sound.ts";
 
 const root = import.meta.dirname;
 const state = process.env.BYOBU_STATE ?? "/var/lib/byobu";
@@ -14,7 +15,7 @@ const paths = {
 };
 const pluginDirectories = [join(root, root.endsWith("src") ? "../plugins" : "plugins"), join(state, "installed")];
 
-const core = new Core(state);
+const core = new Core(state, createSound(state));
 core.themes = listThemes(paths);
 const server = startServer(core, paths, Number(process.env.BYOBU_PORT ?? 8080), "127.0.0.1");
 await core.start(pluginDirectories);

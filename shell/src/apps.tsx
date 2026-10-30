@@ -1,6 +1,6 @@
 // The apps behind the home screen. Each is one of a few layouts filled from what plugins publish,
 // the same way a CarPlay app fills in a template.
-import { mdiCalendarBlankOutline, mdiCctv, mdiCogOutline, mdiHomeOutline, mdiMusicNote, mdiPaletteOutline, mdiWeatherPartlyCloudy } from "@mdi/js";
+import { mdiCalendarBlankOutline, mdiCctv, mdiCogOutline, mdiHomeOutline, mdiMusicNote, mdiPaletteOutline, mdiTimerOutline, mdiWeatherPartlyCloudy } from "@mdi/js";
 import { useState, type ReactNode } from "react";
 import { eventTime, useClock } from "./clock";
 import { CameraFeed, HourlyBars, WeatherLine } from "./faces";
@@ -8,6 +8,7 @@ import { Icon } from "./Icon";
 import { SettingsApp } from "./settings";
 import { agenda, allTiles, cameras, firstWeather, locale, rooms, useStore, type Placed, type Store, type Tile, type Weather } from "./store";
 import { TileView } from "./tiles";
+import { TimersApp } from "./timers";
 import { condition, degrees } from "./weather";
 import { Win } from "./Win";
 
@@ -142,6 +143,7 @@ export function useApps(store: Store): App[] {
   if (tiles.some(({ kind }) => kind === "media")) apps.push({ id: "music", name: "music", icon: mdiMusicNote, Component: MusicApp });
   if (agenda(store).length > 0) apps.push({ id: "calendar", name: "calendar", icon: mdiCalendarBlankOutline, Component: CalendarApp });
   if (cameras(store).length > 0) apps.push({ id: "cameras", name: "cameras", icon: mdiCctv, Component: CamerasApp });
+  if (tiles.some(({ kind }) => kind === "timer")) apps.push({ id: "timers", name: "timers", icon: mdiTimerOutline, Component: TimersApp });
   if (firstWeather(store)) apps.push({ id: "weather", name: "weather", icon: mdiWeatherPartlyCloudy, Component: WeatherApp });
   if (tiles.some(({ kind }) => kind === "scene")) apps.push({ id: "scenes", name: "scenes", icon: mdiPaletteOutline, Component: ScenesApp });
   apps.push({ id: "settings", name: "settings", icon: mdiCogOutline, Component: SettingsApp });

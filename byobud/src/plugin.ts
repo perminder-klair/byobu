@@ -19,6 +19,12 @@ export type Host = {
   publish: (data: PluginData) => void;
   status: (state: PluginStatus["state"], message?: string) => void;
   log: (...args: unknown[]) => void;
+  // A folder of the plugin's own, for caches and config files.
+  directory: string;
+  // Whatever the plugin last saved with store(), kept across restarts.
+  stored: unknown;
+  store: (value: unknown) => void;
+  chime: () => void;
   // The address clients can load a picture from, passed back to the plugin's picture().
   pictureUrl: (path: string) => string;
 };

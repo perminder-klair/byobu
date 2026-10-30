@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Choices, Slider } from "./controls";
 import { faceChoices, modularTiles } from "./faces";
 import { Keyboard } from "./Keyboard";
-import { allTiles, updatePanel, updatePlugin, useStore, type PanelSettings, type PluginSummary, type SettingField } from "./store";
+import { allTiles, selectOutput, updatePanel, updatePlugin, useStore, type PanelSettings, type PluginSummary, type SettingField } from "./store";
 
 const MODULAR_TILES = 3;
 
@@ -27,10 +27,27 @@ const ON_OFF = [
 ];
 
 export function PanelControls() {
-  const panel = useStore().snapshot?.panel;
+  const { panel, outputs = [] } = useStore().snapshot ?? {};
   if (!panel) return null;
   return (
     <>
+      <Slider
+        label="Volume"
+        value={panel.volume}
+        min={0}
+        max={100}
+        step={5}
+        format={(value) => `${value}%`}
+        onChange={(volume) => updatePanel({ volume })}
+      />
+      {outputs.length > 1 && (
+        <Choices
+          label="Sound comes from"
+          options={outputs.map(({ id, name }) => ({ value: id, label: name }))}
+          value={outputs.find(({ selected }) => selected)?.id}
+          onChange={selectOutput}
+        />
+      )}
       <Slider
         label="Brightness"
         value={panel.brightness}
@@ -90,7 +107,7 @@ function FaceSettings() {
   if (!panel) return null;
   const tiles = allTiles(store);
   const bigs = tiles.filter(({ value, kind }) => value != null && kind !== "summary");
-  const small = tiles.filter(({ kind }) => kind !== "scene" && kind !== "media");
+  const small = tiles.filter(({ kind }) => !kind || kind === "summary");
   const { main, small: shown } = modularTiles(store);
   const faces = faceChoices.map(({ id, name }) => ({ value: id, label: name }));
   return (

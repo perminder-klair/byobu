@@ -8,6 +8,7 @@ export type Values = Record<string, string | number | boolean>;
 
 export const PANEL_DEFAULTS: PanelSettings = {
   brightness: 50,
+  volume: 50,
   night: "auto",
   blankAfter: 30,
   theme: "",
@@ -39,7 +40,7 @@ export function savePanel(state: string, panel: PanelSettings) {
   writeJson(join(state, "panel.json"), panel);
 }
 
-export type PluginRecord = { enabled?: boolean; values: Values };
+export type PluginRecord = { enabled?: boolean; values: Values; stored?: unknown };
 
 export function loadPlugin(state: string, id: string): PluginRecord {
   return { values: {}, ...readJson(join(state, "plugins", `${id}.json`), {}) };

@@ -5,6 +5,7 @@
 import { useSyncExternalStore } from "react";
 import type {
   Action,
+  Alert,
   AgendaEvent,
   Camera,
   KeyedData,
@@ -14,6 +15,7 @@ import type {
   PluginSummary,
   Snapshot,
   Tile,
+  Timer,
   Update,
   Weather,
 } from "../../byobud/src/protocol.ts";
@@ -38,6 +40,7 @@ function set(next: Store) {
 function applied(snapshot: Snapshot, update: Update): Snapshot {
   if (update.type === "plugins") return { ...snapshot, plugins: update.plugins };
   if (update.type === "panel") return { ...snapshot, panel: update.panel };
+  if (update.type === "outputs") return { ...snapshot, outputs: update.outputs };
   const { plugin, key, id, value } = update;
   const data = { ...snapshot.data[plugin] } as Record<string, unknown>;
   if (id === undefined) data[key] = value;
@@ -87,6 +90,10 @@ export function updatePlugin(id: string, changes: { enabled?: boolean; values?: 
   send("PUT", `api/plugins/${id}`, changes).catch(console.error);
 }
 
+export function selectOutput(id: string) {
+  send("PUT", "api/output", { id }).catch(console.error);
+}
+
 export function setBacklight(percent: number) {
   send("POST", "api/backlight", { percent }).catch(console.error);
 }
@@ -104,7 +111,7 @@ export function findTile(from: Store, plugin: string, id: string): Placed<Tile> 
 
 // One room per name, in the order plugins gave them, then whatever isn't in one.
 export function rooms(from: Store): Room[] {
-  const controls = allTiles(from).filter(({ kind }) => kind !== "summary" && kind !== "scene");
+  const controls = allTiles(from).filter(({ kind }) => !kind || kind === "media");
   const byRoom = Map.groupBy(controls, ({ room }) => room);
   const names = [...new Set(entries(from).flatMap(([, data]) => data.rooms ?? []))];
   const unknown = [...byRoom.keys()].filter((name): name is string => !!name && !names.includes(name));
@@ -131,6 +138,14 @@ export function activePlayer(from: Store): Placed<Player> | undefined {
 }
 
 export const cameras = (from: Store): Camera[] => entries(from).flatMap(([, data]) => Object.values(data.cameras ?? {}));
+
+export const timers = (from: Store): Placed<Timer>[] =>
+  entries(from)
+    .flatMap(([plugin, data]) => Object.values(data.timers ?? {}).map((timer) => ({ ...timer, plugin })))
+    .sort((a, b) => Date.parse(a.endsAt) - Date.parse(b.endsAt));
+
+export const alerts = (from: Store): Placed<Alert>[] =>
+  entries(from).flatMap(([plugin, data]) => Object.values(data.alerts ?? {}).map((alert) => ({ ...alert, plugin })));
 
 export const locale = (from: Store): Locale | undefined => entries(from).find(([, data]) => data.locale)?.[1].locale;
 

@@ -1371,3 +1371,75 @@ body {
   width: 26px;
   height: 26px;
 }
+
+/* Timers */
+.bar-time {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.timer-badge {
+  height: var(--bar);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-badge .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.timers-app {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+}
+
+.running {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px var(--gap);
+  padding-top: 12px;
+}
+
+.running-timer {
+  display: grid;
+  gap: 12px;
+}
+
+.timer-left {
+  font-size: 44px;
+  font-weight: 300;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.running-timer .action {
+  height: 56px;
+  font-size: 16px;
+}
+
+/* An alert takes the whole screen, and only its own buttons clear it. */
+.alert .sheet {
+  width: min(560px, 100% - 64px);
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 32px 28px 28px;
+  text-align: center;
+}
+
+.alert .sheet > .icon {
+  width: 64px;
+  height: 64px;
+  color: var(--tone);
+}
+
+.alert .actions {
+  width: 100%;
+  margin-top: 16px;
+}

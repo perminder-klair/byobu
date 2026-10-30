@@ -10,6 +10,20 @@ wlr-randr
 # Runs byobud, the service behind the shell
 nodejs
 
+# Sound: mixing and volume, then receiving from phones and streaming apps
+pipewire
+wireplumber
+pipewire-alsa
+pipewire-pulse
+alsa-utils
+rtkit
+nqptp
+shairport-sync
+spotifyd
+playerctl
+
 # Networking
+avahi
+nss-mdns
 iw
 iwd

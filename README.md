@@ -20,7 +20,8 @@ Current target: Raspberry Pi 4 with the 7" Touch Display 2, rotated to landscape
 4. **Platform** (done). `byobud`, a local service that runs plugins and holds their data and
    settings, and a Settings app built from their manifests. Home Assistant is a plugin, and
    weather and calendars work without it.
-5. **Sound.** Speaker and microphone, AirPlay, Spotify Connect, timers.
+5. **Sound** (done). PipeWire, volume and outputs, AirPlay and Spotify Connect receivers that feed
+   Now Playing, and timers with alerts that wake the screen.
 6. **Companion.** A phone app the panel serves, paired by QR code: remote, face editing, plugin
    settings.
 7. **Assistant.** A prompt line, then voice. Its tools are the plugin actions and its answers are
@@ -62,9 +63,16 @@ like Now Playing with nothing playing, isn't there.
   blinds. **Press and hold** any tile for the rest: brightness and colour, fan speed, thermostat
   modes, blind position, volume. Unlocking a lock and opening a garage door or gate only happen
   from there, so brushing the screen can't do them.
-- The **icon at the right of the bar** sets brightness, night mode and when the screen turns off.
+- The **icon at the right of the bar** sets volume, brightness, night mode and when the screen
+  turns off.
+- **Timers** are on the home screen. A running one counts down in the bar, and when it ends it
+  wakes the screen and chimes until you dismiss it, even if byobud restarted in between.
 - **Settings**, on the home screen, also has the theme, which faces show, what's on Modular, and
   each plugin's settings.
+
+Sound comes out of the 3.5 mm jack, or a USB speaker, which takes over when it's plugged in. The
+panel shows up in AirPlay and Spotify as Byobu, and what's playing appears on Now Playing. Rename
+it in Settings. Spotify Connect needs a Premium account on the phone; nothing is stored here.
 
 Left alone for 45 seconds it goes back to the room: whatever was open closes, and it shows the far
 view, one or two big windows that read from across the room, on Now Playing if there's music and
@@ -121,7 +129,8 @@ export default (host) => {
 ```
 
 Plugins publish plain data and the shell draws it, so a plugin can't look out of place in any
-theme. It can publish `tiles`, `rooms`, `agenda`, `weather`, `players` and `cameras`, and doing so
+theme. It can publish `tiles`, `rooms`, `agenda`, `weather`, `players`, `cameras`, `timers` and
+`alerts`, and doing so
 sends only what changed, so it can publish everything every time. `byobud/src/protocol.ts` has
 the types, including the sheet a long press opens, and `schema` builds its Settings page: `string`,
 `url`, `secret`, `boolean`, `number` and `select`. Secrets never leave byobud. See

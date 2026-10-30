@@ -102,6 +102,12 @@ async function api(core: Core, req: IncomingMessage, res: ServerResponse, path: 
     return res.writeHead(204).end();
   }
 
+  if (req.method === "PUT" && route === "output") {
+    const { id: output } = await readBody(req);
+    await core.selectOutput(String(output));
+    return res.writeHead(204).end();
+  }
+
   if (req.method === "POST" && route === "backlight") {
     const { percent } = await readBody(req);
     if (typeof percent !== "number" || percent < 0 || percent > 100) return fail(res, 400, "percent must be 0 to 100");

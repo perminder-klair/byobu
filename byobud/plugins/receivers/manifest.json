@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "id": "receivers",
+  "name": "AirPlay and Spotify",
+  "version": "1.0.0",
+  "description": "Lets phones and computers on your network play to the panel, with AirPlay and Spotify Connect. Spotify needs a Premium account on the phone, and nothing is stored here.",
+  "enabledByDefault": true,
+  "schema": [
+    { "key": "name", "type": "string", "label": "Name", "description": "What the panel is called in your AirPlay and Spotify lists.", "defaultValue": "Byobu" },
+    { "key": "airplay", "type": "boolean", "label": "AirPlay", "defaultValue": true },
+    { "key": "spotify", "type": "boolean", "label": "Spotify Connect", "defaultValue": true }
+  ]
+}

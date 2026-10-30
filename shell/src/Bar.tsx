@@ -4,7 +4,8 @@ import { useClock } from "./clock";
 import type { Face } from "./faces";
 import { Icon } from "./Icon";
 import { usePower } from "./power";
-import { locale, problem, useStore } from "./store";
+import { locale, problem, timers, useStore } from "./store";
+import { TimerBadge } from "./timers";
 
 type BarProps = {
   faces: Face[];
@@ -19,6 +20,7 @@ export function Bar({ faces, current, onFace, onHome, onPanel }: BarProps) {
   const store = useStore();
   const { night } = usePower();
   const clock = useClock(locale(store));
+  const [next] = timers(store);
   return (
     <div className="bar">
       <div className="workspaces">
@@ -33,6 +35,7 @@ export function Bar({ faces, current, onFace, onHome, onPanel }: BarProps) {
       </div>
       <div className="bar-time">
         {clock.weekday} {clock.time}
+        {next && <TimerBadge timer={next} />}
       </div>
       <div className="tray">
         {problem(store) && <Icon path={mdiCloudOffOutline} />}
