@@ -8,6 +8,7 @@ import type {
   Alert,
   AgendaEvent,
   Camera,
+  Conversation,
   KeyedData,
   Locale,
   PanelSettings,
@@ -41,7 +42,7 @@ function set(next: Store) {
 function applied(snapshot: Snapshot, update: Update): Snapshot {
   if (update.type === "plugins") return { ...snapshot, plugins: update.plugins };
   if (update.type === "panel") return { ...snapshot, panel: update.panel };
-  if (update.type === "outputs") return { ...snapshot, outputs: update.outputs };
+  if (update.type === "outputs") return { ...snapshot, outputs: update.outputs, microphone: update.microphone };
   if (update.type === "clients") return { ...snapshot, clients: update.clients };
   if (update.type === "show") return snapshot;
   const { plugin, key, id, value } = update;
@@ -167,6 +168,11 @@ export const timers = (from: Store): Placed<Timer>[] =>
 
 export const alerts = (from: Store): Placed<Alert>[] =>
   entries(from).flatMap(([plugin, data]) => Object.values(data.alerts ?? {}).map((alert) => ({ ...alert, plugin })));
+
+export function conversationOf(from: Store): Placed<Conversation> | undefined {
+  const found = entries(from).find(([, data]) => data.conversation);
+  return found?.[1].conversation && { ...found[1].conversation, plugin: found[0] };
+}
 
 export const locale = (from: Store): Locale | undefined => entries(from).find(([, data]) => data.locale)?.[1].locale;
 

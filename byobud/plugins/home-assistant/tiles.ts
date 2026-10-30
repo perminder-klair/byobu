@@ -249,7 +249,9 @@ function cover({ entity, base }: Input): Tile {
   // Some covers, like a pergola's louvres, only tilt.
   const toggle = can(CoverFeature.OPEN) || can(CoverFeature.CLOSE) ? "toggle" : "toggle_cover_tilt";
   const buttons: Button[] = [];
-  if (can(CoverFeature.OPEN)) buttons.push({ icon: mdiArrowUp, label: "Open", selected: open, action: call(entity, "open_cover") });
+  if (can(CoverFeature.OPEN)) {
+    buttons.push({ icon: mdiArrowUp, label: "Open", selected: open, sensitive: secure || undefined, action: call(entity, "open_cover") });
+  }
   if (can(CoverFeature.STOP)) buttons.push({ icon: mdiStop, label: "Stop", action: call(entity, "stop_cover") });
   if (can(CoverFeature.CLOSE)) {
     buttons.push({ icon: mdiArrowDown, label: "Close", selected: state === "closed" || state === "closing", action: call(entity, "close_cover") });
@@ -278,10 +280,10 @@ function lock({ entity, base }: Input): Tile {
   const locked = state === "locked";
   const buttons: Button[] = [
     { icon: mdiLock, label: "Lock", selected: locked || state === "locking", action: call(entity, "lock") },
-    { icon: mdiLockOpenVariant, label: "Unlock", selected: state === "unlocked" || state === "unlocking", action: call(entity, "unlock") },
+    { icon: mdiLockOpenVariant, label: "Unlock", selected: state === "unlocked" || state === "unlocking", sensitive: true, action: call(entity, "unlock") },
   ];
   if (supports(entity, LockFeature.OPEN)) {
-    buttons.push({ icon: mdiDoorOpen, label: "Open", selected: state === "open" || state === "opening", action: call(entity, "open") });
+    buttons.push({ icon: mdiDoorOpen, label: "Open", selected: state === "open" || state === "opening", sensitive: true, action: call(entity, "open") });
   }
   return {
     ...base,

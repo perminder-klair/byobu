@@ -3,6 +3,7 @@
 // JavaScript would need the main thread for every frame.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useApps } from "./apps";
+import { Ask } from "./Ask";
 import { Bar } from "./Bar";
 import { ActionButton } from "./controls";
 import { useFaces } from "./faces";
@@ -27,6 +28,7 @@ export function Shell() {
   const [recent, setRecent] = useState<string[]>([]);
   const [sheet, setSheet] = useState<{ plugin: string; id: string }>();
   const [panelSheet, setPanelSheet] = useState(false);
+  const [asking, setAsking] = useState(false);
 
   // A face can disappear, like Now Playing when the music stops.
   const face = Math.max(0, faces.findIndex(({ id }) => id === faceId));
@@ -129,6 +131,7 @@ export function Shell() {
       setAppId(undefined);
       setSheet(undefined);
       setPanelSheet(false);
+      setAsking(false);
       setFaceId(activePlayer(store) ? "music" : (faces[0]?.id ?? "modular"));
     }
   }
@@ -166,9 +169,11 @@ export function Shell() {
                 if (app) setAppId(undefined);
                 else setLauncherOpen(false);
               }}
+              onAsk={() => setAsking(true)}
             />
           </div>
           {!launcherOpen && <button className="grabber" aria-label="Open the home screen" onClick={() => setLauncherOpen(true)} />}
+          {asking && <Ask onClose={() => setAsking(false)} />}
           {sheetTile && <TileSheet key={sheetTile.id} tile={sheetTile} onClose={closeSheet} />}
           {panelSheet && (
             <SheetFrame title="Panel" subtitle="This screen" tone="var(--accent)" onClose={closePanelSheet}>

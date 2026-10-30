@@ -30,6 +30,7 @@ export class Core {
   panel: PanelSettings;
   themes: string[] = [];
   private outputs: Output[] = [];
+  private microphone = false;
   private outputsTimer?: ReturnType<typeof setInterval>;
   readonly clients: Clients;
   private readonly state: string;
@@ -59,10 +60,11 @@ export class Core {
   }
 
   private async refreshOutputs() {
-    const outputs = await this.sound.outputs();
-    if (JSON.stringify(outputs) === JSON.stringify(this.outputs)) return;
+    const { outputs, microphone } = await this.sound.devices();
+    if (JSON.stringify(outputs) === JSON.stringify(this.outputs) && microphone === this.microphone) return;
     this.outputs = outputs;
-    this.emit({ type: "outputs", outputs });
+    this.microphone = microphone;
+    this.emit({ type: "outputs", outputs, microphone });
   }
 
   async selectOutput(id: string) {
@@ -109,6 +111,9 @@ export class Core {
         savePlugin(this.state, id, plugin.record);
       },
       chime: () => this.sound.chime(),
+      world: () => this.snapshot(),
+      perform: (plugin, { id: action, data }, value) => this.act(plugin, action, data, value),
+      showFace: (face) => this.showFace(face),
     };
     try {
       const entry = ENTRY_NAMES.map((name) => join(plugin.directory, name)).find(existsSync);
@@ -205,7 +210,7 @@ export class Core {
   }
 
   snapshot(): Snapshot {
-    return { plugins: this.summaries(), data: this.data, panel: this.panel, themes: this.themes, outputs: this.outputs, clients: this.clients.list() };
+    return { plugins: this.summaries(), data: this.data, panel: this.panel, themes: this.themes, outputs: this.outputs, microphone: this.microphone, clients: this.clients.list() };
   }
 
   async act(id: string, action: string, data: Record<string, unknown> | undefined, value: unknown) {

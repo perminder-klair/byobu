@@ -8,7 +8,14 @@ export type Tone = "accent" | "red" | "yellow" | "green" | "cyan" | "blue" | "ma
 // Something a client can ask a plugin to do. Controls send their value along with it.
 export type Action = { id: string; data?: Record<string, unknown> };
 
-export type Button = { icon: string; label: string; selected?: boolean; action: Action };
+export type Button = {
+  icon: string;
+  label: string;
+  selected?: boolean;
+  // Needs a person's press, like unlocking a door: the assistant can only offer it.
+  sensitive?: boolean;
+  action: Action;
+};
 
 export type Slider = {
   type: "slider";
@@ -139,6 +146,26 @@ export type Alert = { id: string; title: string; detail?: string; icon: string; 
 
 export type Output = { id: string; name: string; selected: boolean };
 
+// A tile by the plugin that owns it, for showing one under an answer.
+export type TileRef = { plugin: string; id: string };
+
+export type Turn = {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  tiles?: TileRef[];
+  // What the assistant wants a person to approve, like unlocking a door.
+  confirm?: Button[];
+};
+
+export type Conversation = {
+  busy: boolean;
+  turns: Turn[];
+  // Whether a speech server is set up, and whether it's recording right now.
+  voice?: boolean;
+  listening?: boolean;
+};
+
 // Everything a plugin can publish. Anything left out stays as it was.
 export type PluginData = {
   tiles?: Tile[];
@@ -151,6 +178,7 @@ export type PluginData = {
   timers?: Timer[];
   alerts?: Alert[];
   locale?: Locale;
+  conversation?: Conversation;
 };
 
 export type PluginStatus = { state: "off" | "starting" | "ok" | "error"; message?: string };
@@ -210,6 +238,7 @@ export type Snapshot = {
   panel: PanelSettings;
   themes: string[];
   outputs: Output[];
+  microphone: boolean;
   clients: ClientSummary[];
 };
 
@@ -225,7 +254,7 @@ export type Update =
   | { type: "data"; plugin: string; key: keyof PluginData; id?: string; value: unknown }
   | { type: "plugins"; plugins: PluginSummary[] }
   | { type: "panel"; panel: PanelSettings }
-  | { type: "outputs"; outputs: Output[] }
+  | { type: "outputs"; outputs: Output[]; microphone: boolean }
   | { type: "clients"; clients: ClientSummary[] }
   // Asks the panel's screen to show a face, from a phone.
   | { type: "show"; face: string };

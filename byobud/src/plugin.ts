@@ -2,7 +2,7 @@
 // index file whose default export is a Plugin. It's handed its settings and a Host, and
 // publishes plain data: rebuilding everything on each change is fine, as the Host only passes
 // on what's different.
-import type { PluginData, PluginStatus, SettingField } from "./protocol.ts";
+import type { Action, PluginData, PluginStatus, SettingField, Snapshot } from "./protocol.ts";
 
 export type Manifest = {
   schemaVersion: 1;
@@ -25,6 +25,11 @@ export type Host = {
   stored: unknown;
   store: (value: unknown) => void;
   chime: () => void;
+  // Everything every plugin has published, and a way to use it, for plugins that work across
+  // the others, like the assistant.
+  world: () => Snapshot;
+  perform: (plugin: string, action: Action, value?: unknown) => Promise<void>;
+  showFace: (face: string) => void;
   // The address clients can load a picture from, passed back to the plugin's picture().
   pictureUrl: (path: string) => string;
 };

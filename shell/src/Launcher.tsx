@@ -6,7 +6,7 @@ import { type App } from "./apps";
 import { eventTime, useClock } from "./clock";
 import { Icon } from "./Icon";
 import { Nav } from "./nav";
-import { activePlayer, agenda, firstWeather, locale, timers, useStore } from "./store";
+import { activePlayer, agenda, conversationOf, firstWeather, locale, timers, useStore } from "./store";
 import { Countdown } from "./timers";
 import { condition, degrees } from "./weather";
 import { Win, WinButton } from "./Win";
@@ -19,6 +19,7 @@ type LauncherProps = {
   current?: App;
   recent: string[];
   onHome: () => void;
+  onAsk: () => void;
 };
 
 function Widgets() {
@@ -61,8 +62,9 @@ function Widgets() {
   );
 }
 
-export function Launcher({ open, apps, current, recent, onHome }: LauncherProps) {
-  const clock = useClock(locale(useStore()));
+export function Launcher({ open, apps, current, recent, onHome, onAsk }: LauncherProps) {
+  const store = useStore();
+  const clock = useClock(locale(store));
   const { openApp } = useContext(Nav);
   const recentApps = recent.flatMap((id) => apps.find((app) => app.id === id) ?? []).slice(0, RECENT_APPS);
   return (
@@ -87,6 +89,13 @@ export function Launcher({ open, apps, current, recent, onHome }: LauncherProps)
           </WinButton>
         ))}
       </div>
+      {conversationOf(store) && (
+        <WinButton className="prompt launcher-prompt" onClick={onAsk}>
+          <b>❯</b>
+          <span>ask byōbu</span>
+          <i className="caret" />
+        </WinButton>
+      )}
       {current && (
         <Win title={current.name} focused className="app-view">
           <current.Component />

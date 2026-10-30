@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { chimeWav, parseOutputs } from "./sound.ts";
+import { chimeWav, parseInputs, parseOutputs } from "./sound.ts";
 
 const STATUS = `PipeWire 'pipewire-0' [1.6.10, byobu@byobu, cookie:1]
 Audio
@@ -26,6 +26,11 @@ test("reads the audio outputs and which one is in use", () => {
     { id: "53", name: "Built-in Audio Stereo", selected: true },
     { id: "61", name: "USB Speakerphone Analog Stereo", selected: false },
   ]);
+});
+
+test("reads the microphones", () => {
+  assert.deepEqual(parseInputs(STATUS), [{ id: "62", name: "USB Speakerphone Mono", selected: false }]);
+  assert.deepEqual(parseInputs("Audio\n ├─ Sinks:\n │      53. Speaker\n ├─ Sources:\n │\n ├─ Filters:\n"), []);
 });
 
 test("no outputs is fine", () => {

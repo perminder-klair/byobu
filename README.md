@@ -24,8 +24,8 @@ Current target: Raspberry Pi 4 with the 7" Touch Display 2, rotated to landscape
    Now Playing, and timers with alerts that wake the screen.
 6. **Companion** (done). A phone app the panel serves, paired by QR code: remote, face editing and
    plugin settings, with nothing to install.
-7. **Assistant.** A prompt line, then voice. Its tools are the plugin actions and its answers are
-   templates.
+7. **Assistant** (done). A prompt line and hold to talk, with Claude. Its tools are what the plugins
+   already publish, and its answers come back as live tiles.
 8. **Robustness.** Persistent data partition, read-only root, an update command, and a theme
    that follows the desktop.
 
@@ -93,6 +93,21 @@ A code works once, for five minutes, and only the panel can make one, so getting
 in front of it. Remove a phone in the same place and it's locked out at once. It's plain HTTP on
 your home network, so anyone already on your Wi-Fi who's watching the traffic could read what a
 phone sends, including a token typed into Settings. Don't forward the panel's port to the internet.
+
+## The assistant
+
+Add an Anthropic API key in Settings, under Assistant, and a prompt appears on the home screen and
+an Ask tab on your phone. Ask it to turn things off, set a timer, or what the weather's doing. It
+can use anything other plugins offer without being taught, and the tile it changed shows under its
+answer. Using it is billed to that API key. Opus is the default, and Haiku costs far less.
+
+Opening a lock or a garage only ever gets you a Confirm button, however it's asked, so nothing it
+reads can open your door. A plugin marks these with `sensitive` on a button. What you ask and what it
+looks up to answer goes to Anthropic.
+
+To talk to it, plug in a microphone and set a speech server: anything with OpenAI's audio API,
+which includes Whisper servers you can run on your own network. Hold the microphone button to talk,
+and set a speaking model for spoken replies.
 
 ## Writing a plugin
 

@@ -1,16 +1,17 @@
 // The phone app: the same data and the same parts as the panel, in a layout for one hand. It's
 // served by the panel, so there's nothing to install. A phone gets in by scanning the QR code in
 // the panel's Settings.
-import { mdiHomeOutline, mdiMonitor, mdiPlayCircleOutline, mdiTuneVariant } from "@mdi/js";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { mdiChevronRight, mdiHomeOutline, mdiMonitor, mdiPlayCircleOutline, mdiTuneVariant } from "@mdi/js";
+import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { HomeApp } from "./apps";
+import { Ask } from "./Ask";
 import { IconButton } from "./controls";
 import { faceChoices } from "./faces";
 import { Icon } from "./Icon";
 import { Nav } from "./nav";
 import { FaceSettings, OnPhone, PanelControls, PhoneSettings, PluginSettings, ThemeSettings } from "./settings";
 import { ShowSheet, TileSheet } from "./Sheet";
-import { act, activePlayer, connect, findTile, problem, showFace, useStore, type Placed, type Tile } from "./store";
+import { act, activePlayer, connect, conversationOf, findTile, problem, showFace, useStore, type Placed, type Tile } from "./store";
 import { TimersApp } from "./timers";
 import { Win } from "./Win";
 
@@ -132,6 +133,8 @@ function PhoneApp() {
   const showSheet = useCallback(({ plugin, id }: Placed<Tile>) => setSheet({ plugin, id }), []);
   const nav = useMemo(() => ({ openFace: showFace, openApp: (id: string) => setTab(id === "home" ? "home" : "now") }), []);
   const issue = problem(store);
+  // The assistant's tab is only there if the assistant is.
+  const tabs = conversationOf(store) ? [...TABS.slice(0, 1), { id: "ask", name: "Ask", icon: mdiChevronRight }, ...TABS.slice(1)] : TABS;
   return (
     <ShowSheet value={showSheet}>
       <Nav value={nav}>
@@ -139,13 +142,14 @@ function PhoneApp() {
           <div className="phone">
             <div className="phone-page">
               {tab === "home" && <HomeApp />}
+              {tab === "ask" && <Ask />}
               {tab === "now" && <NowTab />}
               {tab === "panel" && <PanelTab />}
               {tab === "settings" && <SettingsTab />}
             </div>
             {issue && <div className="phone-issue">{issue}</div>}
-            <nav className="phone-tabs">
-              {TABS.map(({ id, name, icon }) => (
+            <nav className="phone-tabs" style={{ "--tabs": tabs.length } as CSSProperties}>
+              {tabs.map(({ id, name, icon }) => (
                 <button key={id} aria-current={id === tab || undefined} onClick={() => setTab(id)}>
                   <Icon path={icon} />
                   {name}

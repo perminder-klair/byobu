@@ -84,3 +84,13 @@ test("summaries count what's on", () => {
   assert.deepEqual(tiles.map(({ value }) => value), ["1 on", "1 unlocked"]);
   assert.equal(tiles[0].link, "app:home");
 });
+
+test("what opens the house needs a person, and what secures it doesn't", () => {
+  const buttons = (tile: ReturnType<typeof tileFor>) => tile.sheet?.sections.flatMap((section) => (section.type === "buttons" ? section.buttons : []));
+  const lock = buttons(tileFor(entity("lock.a", "locked", { supported_features: 1 }), undefined, picture));
+  assert.deepEqual(lock?.map(({ label, sensitive }) => [label, Boolean(sensitive)]), [["Lock", false], ["Unlock", true], ["Open", true]]);
+  const garage = buttons(tileFor(entity("cover.g", "closed", { device_class: "garage", supported_features: 3 }), undefined, picture));
+  assert.deepEqual(garage?.map(({ label, sensitive }) => [label, Boolean(sensitive)]), [["Open", true], ["Close", false]]);
+  const blind = buttons(tileFor(entity("cover.b", "closed", { supported_features: 3 }), undefined, picture));
+  assert.equal(blind?.[0].sensitive, undefined);
+});

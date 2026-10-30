@@ -21,22 +21,31 @@ const CHIME_SECONDS = 1;
 export type Sound = {
   setVolume: (percent: number) => void;
   chime: () => void;
-  outputs: () => Promise<Output[]>;
+  devices: () => Promise<{ outputs: Output[]; microphone: boolean }>;
   select: (id: string) => Promise<void>;
 };
 
-export const silent: Sound = { setVolume: () => {}, chime: () => {}, outputs: async () => [], select: async () => {} };
+export const silent: Sound = {
+  setVolume: () => {},
+  chime: () => {},
+  devices: async () => ({ outputs: [], microphone: false }),
+  select: async () => {},
+};
 
-// wpctl's status lists sinks like " │  *   53. Built-in Audio Stereo [vol: 0.40]".
-export function parseOutputs(status: string): Output[] {
+// wpctl's status lists devices like " │  *   53. Built-in Audio Stereo [vol: 0.40]".
+function listed(status: string, heading: string): Output[] {
   const audio = status.slice(status.indexOf("Audio"));
-  const start = audio.indexOf("Sinks:");
+  const start = audio.indexOf(heading);
   if (start < 0) return [];
-  const end = audio.indexOf("Sources:", start);
-  return [...audio.slice(start, end < 0 ? undefined : end).matchAll(/(\*?)\s+(\d+)\.\s+(.+?)(?:\s+\[vol:.*)?$/gm)].map(
+  const rest = audio.slice(start + heading.length);
+  const end = rest.search(/[├└]─/);
+  return [...rest.slice(0, end < 0 ? undefined : end).matchAll(/(\*?)\s+(\d+)\.\s+(.+?)(?:\s+\[vol:.*)?$/gm)].map(
     ([, star, id, name]) => ({ id, name: name.trim(), selected: star === "*" }),
   );
 }
+
+export const parseOutputs = (status: string) => listed(status, "Sinks:");
+export const parseInputs = (status: string) => listed(status, "Sources:");
 
 // A little WAV file, written out rather than kept in the repository as a binary.
 export function chimeWav(): Buffer {
@@ -78,11 +87,12 @@ export function createSound(state: string): Sound {
     chime() {
       spawn("pw-play", [chimeFile], { stdio: "ignore" }).on("error", quietly);
     },
-    async outputs() {
+    async devices() {
       try {
-        return parseOutputs((await run("wpctl", ["status"])).stdout);
+        const { stdout } = await run("wpctl", ["status"]);
+        return { outputs: parseOutputs(stdout), microphone: parseInputs(stdout).length > 0 };
       } catch {
-        return [];
+        return { outputs: [], microphone: false };
       }
     },
     async select(id) {

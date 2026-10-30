@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "id": "assistant",
+  "name": "Assistant",
+  "version": "1.0.0",
+  "description": "Ask byōbu to do things, with Claude. It can use anything the other plugins offer, but opening a lock or a garage always waits for you to press Confirm. What you ask, and what it looks up to answer, goes to Anthropic. With a microphone and a speech server, you can also hold to talk.",
+  "enabledByDefault": true,
+  "schema": [
+    {
+      "key": "apiKey",
+      "type": "secret",
+      "label": "Anthropic API key",
+      "description": "From console.anthropic.com. Using the assistant is billed to that account.",
+      "defaultValue": ""
+    },
+    {
+      "key": "model",
+      "type": "select",
+      "label": "Model",
+      "description": "Haiku costs far less and suits simple commands.",
+      "defaultValue": "claude-opus-5-5",
+      "options": [
+        {
+          "value": "claude-opus-5-5",
+          "label": "Opus"
+        },
+        {
+          "value": "claude-sonnet-5-5",
+          "label": "Sonnet"
+        },
+        {
+          "value": "claude-haiku-5-5",
+          "label": "Haiku"
+        }
+      ]
+    },
+    {
+      "key": "speechUrl",
+      "type": "url",
+      "label": "Speech server",
+      "description": "For talking to it: anything with OpenAI's audio API, like https://api.openai.com/v1 or a Whisper server on your own network. Leave empty to only type.",
+      "defaultValue": ""
+    },
+    {
+      "key": "speechKey",
+      "type": "secret",
+      "label": "Speech server key",
+      "defaultValue": ""
+    },
+    {
+      "key": "listenModel",
+      "type": "string",
+      "label": "Listening model",
+      "defaultValue": "whisper-1"
+    },
+    {
+      "key": "speakModel",
+      "type": "string",
+      "label": "Speaking model",
+      "description": "Leave empty for no spoken replies.",
+      "defaultValue": ""
+    },
+    {
+      "key": "speakVoice",
+      "type": "string",
+      "label": "Voice",
+      "defaultValue": "alloy"
+    }
+  ]
+}
