@@ -28,6 +28,10 @@ Current target: Raspberry Pi 4 with the 7" Touch Display 2, rotated to landscape
    what the plugins already publish, and its answers come back as live tiles.
 8. **Robustness** (done). A data partition for everything that changes, a read-only root, an update
    command that goes back by itself if a new version fails, and a theme that follows the desktop.
+9. **Native panel** (started). The panel's screen drawn with [Slint](https://slint.dev) in Rust in
+   place of Chromium, as another client of byobud. So far `panel/` draws the clock face and the
+   rooms, swipes between them and sends taps back. It hasn't run on a Pi yet, and the image still
+   boots the shell.
 
 ## Building an image
 
@@ -233,6 +237,25 @@ flashing a new image: packages, everything in `rootfs/` except the boot partitio
 byobud builds, and the desktop's themes. Settings on the panel are left alone, and any release
 installed with `byobu-update` is set aside so the checkout's build runs.
 
+### The native panel
+
+`panel/` is the start of the panel's screen without a browser: a Rust program using Slint that
+follows the same `/api/events` as the shell and draws it itself. It needs Rust, and a byobud to
+talk to. `dev/fixture-home` runs one on throwaway state with a made-up home, with no Docker:
+
+```sh
+dev/fixture-home                 # byobud on :8080, in one terminal
+cd panel && cargo run            # the panel, in a window
+cargo test
+```
+
+`BYOBU_URL` points it at a byobud somewhere else. `BYOBU_SCRIPT` works it without a finger and
+saves pictures, as in `BYOBU_SCRIPT="wait; swipe 1000 400 300 400; tap 500 150; save panel.png;
+quit"`. For the panel itself, `cargo build --release --features kms` adds Slint's backend that
+draws straight to the display with no compositor, chosen with `SLINT_BACKEND=linuxkms`. That build
+compiles but hasn't been run on a Pi, so frame times, touch and rotation there are still unknown.
+The time is in English and the panel's own time zone for now.
+
 On the panel, byobud serves the shell and its API on port 8080. Plugins run inside it, so the
 browser never holds a token. The API answers the panel's own browser on localhost and paired
 phones, and nothing else. Settings live in `/var/lib/byobu`: `panel.json` has the panel's own,
@@ -284,6 +307,7 @@ Logs: `journalctl -b -u byobu-config -u byobud -u byobu-kiosk`.
 builder/    image builder (runs on the host, then inside the image via arch-chroot)
 rootfs/     files copied into the image as-is; rootfs/boot goes onto the FAT boot partition
 shell/      the shell, a web app
+panel/      the start of a native panel screen, in Rust with Slint
 byobud/     the service behind it, and the built-in plugins
 dev/        Home Assistant for development, the panel tunnel, and syncing a running panel
 site/       the website and manual, a Next.js app

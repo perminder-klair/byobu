@@ -1,0 +1,29 @@
+#!/bin/bash
+# Runs byobud on throwaway state with the website's made-up home in place of Home Assistant, for
+# working on a client with no Docker and nothing to set up. Presses work, and are forgotten when it
+# stops. Port 8080 needs to be free.
+#
+#   dev/fixture-home
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+state=$(mktemp -d)
+trap 'rm -rf "$state"' EXIT
+mkdir -p "$state/plugins" "$state/installed"
+ln -s "$PWD/site/scripts/fixture" "$state/installed/fixture"
+echo '{"night":"off"}' > "$state/panel.json"
+for plugin in home-assistant receivers assistant; do
+  echo '{"enabled":false,"values":{}}' > "$state/plugins/$plugin.json"
+done
+
+# The themes are exported by an image build. Without them byobud lists none and serves no
+# theme.css, and clients fall back to their built-in palette.
+if [ ! -d cache/themes ]; then
+  echo "No cache/themes yet, so there are no themes to choose from. Building an image exports them." >&2
+fi
+
+# No PATH, so byobud can't find wpctl and change this machine's volume.
+cd byobud
+env -i HOME="$HOME" PATH=/nonexistent BYOBU_ADDRESS=127.0.0.1 BYOBU_STATE="$state" \
+  BYOBU_THEMES="$PWD/../cache/themes" BYOBU_DEFAULT_THEME="$state/theme" BYOBU_SHELL="$PWD/../shell/dist" \
+  "$(command -v node)" src/main.ts

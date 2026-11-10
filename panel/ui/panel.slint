@@ -1,0 +1,285 @@
+// The whole screen: the bar along the top and the pages you swipe between. So far that's the
+// clock face and the rooms of the home app, enough to show data arriving, a swipe and a tap.
+import { Blocks, Glyph, Motion, Theme, TileData, TileView, Win } from "parts.slint";
+
+export { Theme }
+
+export struct AgendaRow {
+    when: string,
+    what: string,
+}
+
+component Bar inherits Rectangle {
+    in property <int> pages;
+    in property <int> current;
+    in property <string> time;
+    callback chosen(int);
+    height: Theme.bar;
+    background: Theme.background;
+    HorizontalLayout {
+        padding-left: 8px;
+        alignment: start;
+        for index in root.pages: Rectangle {
+            width: 48px;
+            Text {
+                text: index + 1;
+                color: index == root.current ? Theme.foreground : Theme.text-dim;
+                font-size: 16px;
+                font-weight: index == root.current ? 700 : 400;
+            }
+            if index == root.current: Rectangle {
+                y: parent.height - 2px;
+                height: 2px;
+                background: Theme.accent;
+            }
+            TouchArea {
+                clicked => {
+                    root.chosen(index);
+                }
+            }
+        }
+    }
+    Text {
+        text: root.time;
+        color: Theme.foreground;
+        font-size: 16px;
+    }
+}
+
+component ClockFace inherits Rectangle {
+    in property <[Glyph]> time;
+    in property <string> date;
+    in property <[AgendaRow]> agenda;
+    // The shell's 1.35 to 1 split.
+    property <length> main: (self.width - Theme.gap) * 1.35 / 2.35;
+    Win {
+        x: 0;
+        width: root.main;
+        title: "clock";
+        number: 1;
+        focused: true;
+        VerticalLayout {
+            alignment: center;
+            spacing: 22px;
+            Blocks {
+                glyphs: root.time;
+                cell: 36px;
+            }
+            Text {
+                text: root.date;
+                color: Theme.text-dim;
+                horizontal-alignment: center;
+            }
+        }
+    }
+    Win {
+        x: root.main + Theme.gap;
+        width: root.width - self.x;
+        title: "agenda";
+        number: 2;
+        VerticalLayout {
+            padding-left: 20px;
+            padding-right: 20px;
+            padding-top: 18px;
+            padding-bottom: 18px;
+            alignment: start;
+            spacing: 10px;
+            for row in root.agenda: HorizontalLayout {
+                spacing: 14px;
+                Text {
+                    width: 88px;
+                    text: row.when;
+                    color: Theme.accent;
+                    font-size: 16px;
+                }
+                Text {
+                    text: row.what;
+                    color: Theme.foreground;
+                    font-size: 16px;
+                    overflow: elide;
+                }
+            }
+            if root.agenda.length == 0: Text {
+                text: "nothing coming up";
+                color: Theme.text-dim;
+                font-size: 16px;
+            }
+        }
+    }
+}
+
+component Rooms inherits Rectangle {
+    in property <[string]> rooms;
+    in property <string> current;
+    in property <[TileData]> tiles;
+    callback room-chosen(string);
+    callback tile-tapped(string, string);
+    property <length> list: 210px;
+    property <length> tile-width: (self.width - self.list - 3 * Theme.gap) / 3;
+    property <length> pitch: 128px + Theme.gap;
+    VerticalLayout {
+        x: 0;
+        width: root.list;
+        alignment: start;
+        spacing: 2px;
+        for room in root.rooms: Rectangle {
+            height: 50px;
+            background: room == root.current ? Theme.raised : transparent;
+            Text {
+                x: 14px;
+                width: parent.width - 28px;
+                text: room;
+                color: room == root.current ? Theme.foreground : Theme.text-dim;
+                horizontal-alignment: left;
+                overflow: elide;
+            }
+            TouchArea {
+                clicked => {
+                    root.room-chosen(room);
+                }
+            }
+        }
+    }
+    Flickable {
+        x: root.list + Theme.gap;
+        width: root.width - self.x;
+        content-height: Math.ceil(root.tiles.length / 3) * root.pitch;
+        for tile[index] in root.tiles: TileView {
+            x: Math.mod(index, 3) * (root.tile-width + Theme.gap);
+            y: Math.floor(index / 3) * root.pitch;
+            width: root.tile-width;
+            height: 128px;
+            tile: tile;
+            tapped => {
+                root.tile-tapped(tile.plugin, tile.id);
+            }
+        }
+    }
+}
+
+export component Panel inherits Window {
+    in property <image> wallpaper;
+    in property <[Glyph]> time;
+    in property <string> date;
+    in property <string> bar-time;
+    in property <[AgendaRow]> agenda;
+    in property <[string]> rooms;
+    in property <string> current-room;
+    in property <[TileData]> tiles;
+    // Something to say out loud, like a lost connection.
+    in property <string> status;
+    in-out property <int> page;
+    callback room-chosen(string);
+    callback tile-tapped(string, string);
+    property <int> pages: 2;
+    // Where a page sits inside the strip: below the bar, with a gap all round.
+    property <length> face-y: Theme.bar + Theme.gap;
+    property <length> face-width: self.width - 2 * Theme.edge;
+    property <length> face-height: self.height - self.face-y - Theme.edge;
+
+    title: "Byōbu";
+    preferred-width: 1280px;
+    preferred-height: 720px;
+    background: Theme.background;
+    default-font-family: "JetBrains Mono";
+    default-font-size: 18px;
+
+    Image {
+        width: 100%;
+        height: 100%;
+        source: root.wallpaper;
+        image-fit: cover;
+    }
+
+    // Slint has no scrolling with snap points, so this is the shell's swipe by hand: the strip
+    // follows the finger, then eases to whichever page it was let go nearest.
+    swipe := SwipeGestureHandler {
+        handle-swipe-left: root.page < root.pages - 1;
+        handle-swipe-right: root.page > 0;
+        swiped => {
+            if self.current-position.x < self.pressed-position.x - 80px {
+                root.page += 1;
+            } else if self.current-position.x > self.pressed-position.x + 80px {
+                root.page -= 1;
+            }
+        }
+        Rectangle {
+            property <length> settled: -root.page * root.width;
+            property <length> dragged;
+            x: self.settled + self.dragged;
+            width: root.pages * root.width;
+            animate settled {
+                duration: 300ms;
+                easing: Motion.ease;
+            }
+            states [
+                swiping when swipe.swiping: {
+                    dragged: swipe.current-position.x - swipe.pressed-position.x;
+                    out {
+                        animate dragged {
+                            duration: 300ms;
+                            easing: Motion.ease;
+                        }
+                    }
+                }
+            ]
+            ClockFace {
+                x: Theme.edge;
+                y: root.face-y;
+                width: root.face-width;
+                height: root.face-height;
+                time: root.time;
+                date: root.date;
+                agenda: root.agenda;
+            }
+            Win {
+                x: root.width + Theme.edge;
+                y: root.face-y;
+                width: root.face-width;
+                height: root.face-height;
+                title: "home";
+                focused: true;
+                Rooms {
+                    x: 20px;
+                    y: 18px;
+                    width: parent.width - 40px;
+                    height: parent.height - 36px;
+                    rooms: root.rooms;
+                    current: root.current-room;
+                    tiles: root.tiles;
+                    room-chosen(room) => {
+                        root.room-chosen(room);
+                    }
+                    tile-tapped(plugin, id) => {
+                        root.tile-tapped(plugin, id);
+                    }
+                }
+            }
+        }
+    }
+
+    Bar {
+        y: 0;
+        pages: root.pages;
+        current: root.page;
+        time: root.bar-time;
+        chosen(index) => {
+            root.page = index;
+        }
+    }
+
+    if root.status != "": Rectangle {
+        x: (root.width - self.width) / 2;
+        y: root.height - self.height - 24px;
+        width: said.preferred-width + 40px;
+        height: 44px;
+        background: Theme.background;
+        border-width: 2px;
+        border-color: Theme.accent;
+        said := Text {
+            text: root.status;
+            color: Theme.foreground;
+            font-size: 16px;
+        }
+    }
+}

@@ -9,8 +9,8 @@ Assistant, `dev/panel` and `dev/sync`.
 
 ## Commands
 
-`byobud/`, `shell/` and `site/` are separate pnpm packages with no workspace, so run these inside
-each one.
+`byobud/`, `shell/` and `site/` are separate pnpm packages with no workspace, and `panel/` is a
+Rust crate, so run these inside each one.
 
 ```sh
 # byobud/
@@ -30,10 +30,17 @@ pnpm dev                                                    # :3000
 pnpm build
 pnpm capture                                                # retakes public/shots
 pnpm themes                                                 # regenerates the palettes
+
+# panel/
+cargo test
+cargo run                                                   # a window, talking to byobud on :8080
+cargo check --features kms                                  # the build for the panel itself
 ```
 
-- Only byobud has tests. There's no linter or formatter, so `pnpm typecheck` in both packages is
-  the check for any change.
+- Only byobud and `panel/` have tests. There's no linter or formatter, so `pnpm typecheck` in both
+  packages is the check for any change, and `cargo test` for the panel.
+- `dev/fixture-home` runs byobud on throwaway state with the site's fixture home, which is the
+  quickest thing to point `panel/` at.
 - Reach for `pnpm typecheck` over `pnpm build` in byobud: the build also runs `builder/fetch-voice`,
   a large download the first time (cached in `~/.cache/byobu/voice`).
 - View the panel at http://localhost:5173 at 1280×720, and the phone app at `/phone`. Port 8080
@@ -62,6 +69,7 @@ the contract between them, and `byobud/src/plugin.ts` is what a plugin is handed
 
 - New `PluginData` field: `protocol.ts` and a selector in `shell/src/store.ts`. For a list keyed by
   id, also `KEYED` in `core.ts` and `KeyedData` in `protocol.ts`.
+- Anything the native panel draws: `panel/src/protocol.rs` when its type changes in `protocol.ts`.
 - New `Section` type: `shell/src/Sheet.tsx` and `fromSection` in `plugins/assistant/devices.ts`.
 - New face: `FACES` in `shell/src/faces.tsx`, `PANEL_DEFAULTS.faces` in `byobud/src/settings.ts` and
   `faceNames` in `plugins/assistant/devices.ts`.
@@ -107,6 +115,24 @@ those roles, as every theme has to work, light or dark.
 
 `Phone.tsx` is the phone app, sharing the store and parts with its own layout. `power.ts` runs on
 the panel only.
+
+### Native panel
+
+`panel/` is replacing Chromium and the shell on the panel's screen, a piece at a time, and isn't in
+the image yet. It's one more client of byobud, so nothing in byobud or a plugin changes for it, and
+the shell stays as the phone app.
+
+- `ui/*.slint` is the screens and `src/main.rs` fills their properties. The store is updated on
+  the thread that reads events and drawn on Slint's, with `request_render` folding a burst of
+  updates into one redraw and `sync` changing only the rows that differ.
+- `src/protocol.rs` mirrors `byobud/src/protocol.ts` by hand, only as far as what's drawn, and
+  skips what it doesn't know.
+- `src/theme.rs` reads the same `theme.css` and derives the same roles as `styles.css`, mixing in
+  oklab as the browser does. Screens build from the `Theme` global.
+- Slint has no scroll snapping, so swiping between pages is `SwipeGestureHandler` in
+  `ui/panel.slint`.
+- `BYOBU_SCRIPT` (`src/script.rs`) taps, swipes and saves pictures, which is how to see a change
+  where there's no display. Under Xvfb, `SLINT_BACKEND=winit-software` needs no GPU.
 
 ### On the panel
 

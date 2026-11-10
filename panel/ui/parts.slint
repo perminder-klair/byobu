@@ -1,0 +1,153 @@
+// The pieces every screen is built from, in the shell's vocabulary: the theme's colour roles, tiled
+// windows with their titles notched into the border, icons, and the block digits.
+
+// Filled in from theme.css when it loads. The roles are worked out in theme.rs, as the shell's
+// are in styles.css, so build from these rather than from colours of your own.
+export global Theme {
+    in property <color> background: #1f1f28;
+    in property <color> foreground: #dcd7ba;
+    in property <color> accent: #dcd7ba;
+    in property <color> raised: #32323a;
+    in property <color> border: #54535a;
+    in property <color> text-dim: #94917f;
+    out property <color> window: background.with-alpha(0.95);
+    // The same spacing as Omarchy's Hyprland: 5 + 5 between windows, 10 to the edge.
+    out property <length> gap: 10px;
+    out property <length> edge: 10px;
+    out property <length> bar: 44px;
+}
+
+// How things move: quick to start and slow to settle, as in the shell.
+export global Motion {
+    out property <easing> ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+// An icon from @mdi/js, which plugins send as the path itself.
+export component Icon inherits Path {
+    in property <string> icon;
+    in property <brush> colour: Theme.foreground;
+    width: 24px;
+    height: 24px;
+    viewbox-width: 24;
+    viewbox-height: 24;
+    commands: icon;
+    fill: colour;
+}
+
+export struct Glyph {
+    columns: int,
+    commands: string,
+}
+
+// Big square digits, readable across a room. blocks.rs turns text into these.
+export component Blocks inherits HorizontalLayout {
+    in property <[Glyph]> glyphs;
+    in property <length> cell: 22px;
+    in property <brush> colour: Theme.accent;
+    alignment: center;
+    spacing: cell;
+    for glyph in glyphs: Path {
+        width: glyph.columns * root.cell;
+        height: 5 * root.cell;
+        viewbox-width: glyph.columns;
+        viewbox-height: 5;
+        commands: glyph.commands;
+        fill: root.colour;
+    }
+}
+
+// A tiled window with its title notched into the border, like btop's panels.
+export component Win inherits Rectangle {
+    in property <string> title;
+    // Left at 0 for a window with no number.
+    in property <int> number;
+    in property <bool> focused;
+    background: Theme.window;
+    border-width: 2px;
+    border-color: focused ? Theme.accent : Theme.border;
+    @children
+    if title != "": Rectangle {
+        x: 14px;
+        y: -12px;
+        width: label.preferred-width;
+        height: 22px;
+        background: Theme.background;
+        label := HorizontalLayout {
+            padding-left: 6px;
+            padding-right: 6px;
+            spacing: 2px;
+            if root.number > 0: Text {
+                text: root.number;
+                color: Theme.accent;
+                font-size: 11px;
+                font-weight: 500;
+                vertical-alignment: top;
+            }
+            Text {
+                text: root.title;
+                color: Theme.text-dim;
+                font-size: 14px;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
+
+export struct TileData {
+    plugin: string,
+    id: string,
+    name: string,
+    detail: string,
+    icon: string,
+    tone: color,
+    // What it's filled with when it's on: the tone mixed into the background.
+    fill: color,
+    active: bool,
+    unavailable: bool,
+}
+
+export component TileView inherits Rectangle {
+    in property <TileData> tile;
+    callback tapped();
+    property <bool> lit: tile.active && !tile.unavailable;
+    background: lit ? tile.fill : Theme.window;
+    border-width: 2px;
+    border-color: lit ? tile.tone : Theme.border;
+    opacity: tile.unavailable ? 0.45 : 1;
+    animate background, border-color { duration: 200ms; }
+    Icon {
+        x: 14px;
+        y: 12px;
+        width: 30px;
+        height: 30px;
+        icon: tile.icon;
+        colour: lit ? tile.tone : Theme.text-dim;
+        animate colour { duration: 200ms; }
+    }
+    VerticalLayout {
+        padding-left: 14px;
+        padding-right: 14px;
+        padding-top: 12px;
+        padding-bottom: 12px;
+        alignment: end;
+        Text {
+            text: tile.name;
+            color: Theme.foreground;
+            font-size: 17px;
+            font-weight: 500;
+            overflow: elide;
+        }
+        Text {
+            text: tile.unavailable ? "Unavailable" : tile.detail;
+            color: Theme.text-dim;
+            font-size: 14px;
+            overflow: elide;
+        }
+    }
+    TouchArea {
+        enabled: !tile.unavailable;
+        clicked => {
+            root.tapped();
+        }
+    }
+}
