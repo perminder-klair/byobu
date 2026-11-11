@@ -169,7 +169,13 @@ export component Panel inherits Window {
     // Something to say out loud, like a lost connection.
     in property <string> status;
     in-out property <int> page;
+    // near, far, dim or blank, from power.rs.
+    in property <string> power: "near";
+    // Red on black, with no wallpaper.
+    in property <bool> night;
     callback room-chosen(string);
+    // A touch on a dim or blank screen, which only wakes it.
+    callback woken();
     callback tile-tapped(string, string);
     property <int> pages: 2;
     // Where a page sits inside the strip: below the bar, with a gap all round.
@@ -191,6 +197,7 @@ export component Panel inherits Window {
         height: 100%;
         source: root.wallpaper;
         image-fit: cover;
+        opacity: root.night ? 0 : 1;
     }
 
     // Slint has no scrolling with snap points, so this is the shell's swipe by hand: the strip
@@ -282,6 +289,29 @@ export component Panel inherits Window {
             text: root.status;
             color: Theme.foreground;
             font-size: 16px;
+        }
+    }
+
+    // The backlight goes off with blank, and this covers the screen too, for one with no backlight
+    // to turn off, like a monitor on a desk.
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        background: black;
+        opacity: root.power == "blank" ? 1 : 0;
+        animate opacity { duration: 1s; }
+    }
+
+    // Takes the whole of a touch on a sleeping screen, so waking it never presses what's under the
+    // finger. Nothing can be seen to aim at on a blank screen, and a dim one may be far across the
+    // room.
+    if root.power == "dim" || root.power == "blank": TouchArea {
+        width: 100%;
+        height: 100%;
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down {
+                root.woken();
+            }
         }
     }
 }

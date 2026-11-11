@@ -72,12 +72,24 @@ pub struct PluginSummary {
     pub status: PluginStatus,
 }
 
-#[derive(Clone, Debug, Default, Deserialize, PartialEq)]
+// Missing fields take byobud's own defaults from settings.ts, which also stand in until byobud
+// has answered.
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(default, rename_all = "camelCase")]
 pub struct PanelSettings {
-    #[serde(default)]
     pub theme: String,
-    #[serde(default, rename = "themeStamp")]
     pub theme_stamp: f64,
+    pub brightness: f64,
+    // "auto", "on" or "off".
+    pub night: String,
+    // Minutes without a touch before the screen turns off, or 0 to leave it on.
+    pub blank_after: f64,
+}
+
+impl Default for PanelSettings {
+    fn default() -> Self {
+        PanelSettings { theme: String::new(), theme_stamp: 0.0, brightness: 50.0, night: "auto".into(), blank_after: 30.0 }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize)]

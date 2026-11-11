@@ -1,9 +1,12 @@
+// Touches as libinput sees them, when the panel draws straight to the display. Every touch counts
+// as someone being there for the screen's power, before Slint decides what it lands on.
+//
 // Slint turns the picture for SLINT_KMS_ROTATION but leaves the touchscreen as it is, so on a
-// rotated panel every touch lands on the wrong axis. libinput can turn a touchscreen's own
+// rotated panel every touch would land on the wrong axis. libinput can turn a touchscreen's own
 // coordinates with a calibration matrix, which this sets inside the panel's process only, leaving
 // the system's setup alone for anything else that reads the screen, like cage.
 #[cfg(feature = "kms")]
-pub fn follow_rotation() -> Result<(), slint::PlatformError> {
+pub fn start() -> Result<(), slint::PlatformError> {
     use input::event::touch::TouchEventPosition;
     use input::event::{DeviceEvent, Event, EventTrait, TouchEvent};
 
@@ -11,9 +14,6 @@ pub fn follow_rotation() -> Result<(), slint::PlatformError> {
     let matrix = matrix(&rotation);
     // BYOBU_TOUCHES says where each touch lands on a 1280 by 720 screen, for checking the turn.
     let report = std::env::var_os("BYOBU_TOUCHES").is_some();
-    if matrix.is_none() && !report {
-        return Ok(());
-    }
     slint::BackendSelector::new()
         .with_libinput_event_hook(move |event| {
             match event {
@@ -23,9 +23,13 @@ pub fn follow_rotation() -> Result<(), slint::PlatformError> {
                         let _ = device.config_calibration_set_matrix(matrix);
                     }
                 }
-                Event::Touch(TouchEvent::Down(down)) if report => {
-                    eprintln!("Touch at {:.0}, {:.0}", down.x_transformed(1280), down.y_transformed(720));
+                Event::Touch(touch) => {
+                    crate::power::touched();
+                    if let (true, TouchEvent::Down(down)) = (report, touch) {
+                        eprintln!("Touch at {:.0}, {:.0}", down.x_transformed(1280), down.y_transformed(720));
+                    }
                 }
+                Event::Pointer(_) | Event::Keyboard(_) => crate::power::touched(),
                 _ => {}
             }
             // Every event still goes on to Slint.
@@ -34,8 +38,9 @@ pub fn follow_rotation() -> Result<(), slint::PlatformError> {
         .select()
 }
 
+// In a window on a desk, the panel's own taps and swipes stand in for touches.
 #[cfg(not(feature = "kms"))]
-pub fn follow_rotation() -> Result<(), slint::PlatformError> {
+pub fn start() -> Result<(), slint::PlatformError> {
     Ok(())
 }
 

@@ -9,6 +9,8 @@ pub struct Rgb {
     pub b: u8,
 }
 
+const NIGHT_RED: Rgb = rgb(0xc9, 0x3a, 0x2e);
+
 const fn rgb(r: u8, g: u8, b: u8) -> Rgb {
     Rgb { r, g, b }
 }
@@ -25,6 +27,8 @@ pub struct Palette {
     pub blue: Rgb,
     pub magenta: Rgb,
     pub orange: Option<Rgb>,
+    // Red on black, which has roles of its own rather than ones mixed from the palette.
+    pub night: bool,
 }
 
 // Omarchy's Kanagawa, for when theme.css can't be loaded.
@@ -41,6 +45,7 @@ impl Default for Palette {
             blue: rgb(0x7e, 0x9c, 0xd8),
             magenta: rgb(0x95, 0x7f, 0xb8),
             orange: None,
+            night: false,
         }
     }
 }
@@ -68,19 +73,39 @@ impl Palette {
             blue: get("blue", fallback.blue),
             magenta: get("magenta", fallback.magenta),
             orange: found.get("orange").copied(),
+            night: false,
+        }
+    }
+
+    // Red on black, so a screen in a dark room doesn't light it up: :root[data-night] in the shell's
+    // styles.css. Colours a plugin gives a tile itself, like a lamp's, stay as they are.
+    pub fn night() -> Palette {
+        let red = NIGHT_RED;
+        Palette {
+            background: rgb(0, 0, 0),
+            foreground: red,
+            accent: red,
+            red,
+            yellow: red,
+            green: red,
+            cyan: red,
+            blue: red,
+            magenta: red,
+            orange: Some(red),
+            night: true,
         }
     }
 
     pub fn raised(&self) -> Rgb {
-        mix(self.background, self.foreground, 0.10)
+        if self.night { rgb(0x1c, 0x07, 0x05) } else { mix(self.background, self.foreground, 0.10) }
     }
 
     pub fn border(&self) -> Rgb {
-        mix(self.background, self.foreground, 0.30)
+        if self.night { rgb(0x4a, 0x14, 0x0f) } else { mix(self.background, self.foreground, 0.30) }
     }
 
     pub fn text_dim(&self) -> Rgb {
-        mix(self.background, self.foreground, 0.62)
+        if self.night { rgb(0x8f, 0x28, 0x20) } else { mix(self.background, self.foreground, 0.62) }
     }
 
     // Not every theme has an orange.

@@ -4,18 +4,19 @@
 mod blocks;
 mod clock;
 mod net;
+mod power;
 mod protocol;
 mod script;
 mod store;
 mod theme;
 mod touch;
 
-use chrono::Local;
+use chrono::{Local, Timelike};
 use net::{Api, Event};
-use protocol::PanelSettings;
-use slint::{ComponentHandle, Image, Model, ModelRc, Rgba8Pixel, SharedPixelBuffer, SharedString, Timer, VecModel};
+use power::Power;
+use slint::{ComponentHandle, Image, Model, ModelRc, Rgba8Pixel, SharedPixelBuffer, SharedString, Timer, TimerMode, VecModel};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::mpsc::{Sender, channel};
+use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
@@ -35,6 +36,9 @@ struct Shared {
     api: Api,
     store: Mutex<Store>,
     palette: Mutex<Palette>,
+    power: Mutex<Power>,
+    // Posts to byobud, sent in order on a thread of their own.
+    actions: Sender<(String, serde_json::Value)>,
     // Set while a redraw is already on its way, so a burst of updates costs one.
     pending: AtomicBool,
     panel: slint::Weak<Panel>,
@@ -78,7 +82,7 @@ fn tile_data(Placed { plugin, tile }: &Placed, palette: &Palette) -> TileData {
 fn render(panel: &Panel, shared: &Shared) {
     // Cleared first, so anything arriving while this runs asks for another.
     shared.pending.store(false, Ordering::SeqCst);
-    let palette = shared.palette.lock().unwrap().clone();
+    let palette = if shared.power.lock().unwrap().night { Palette::night() } else { shared.palette.lock().unwrap().clone() };
     let store = shared.store.lock().unwrap();
 
     let theme = panel.global::<Theme>();
@@ -148,10 +152,29 @@ fn load_theme(shared: &Arc<Shared>) {
     });
 }
 
+// Once a second as the shell does, and straight away when something wakes the screen. The
+// backlight goes through byobud, which owns it, as the shell's does.
+fn refresh_power(panel: &Panel, shared: &Shared) {
+    let settings = shared.store.lock().unwrap().snapshot.as_ref().map(|snapshot| snapshot.panel.clone()).unwrap_or_default();
+    let mut power = shared.power.lock().unwrap();
+    let change = power.refresh(&settings, Local::now().hour());
+    let (state, night) = (power.state, power.night);
+    drop(power);
+    if let Some(percent) = change.backlight {
+        let _ = shared.actions.send(("/api/backlight".into(), serde_json::json!({ "percent": percent })));
+    }
+    if change.redraw {
+        panel.set_power(state.name().into());
+        panel.set_night(night);
+        render(panel, shared);
+    }
+}
+
 // Follows byobud for as long as the panel runs. It sends everything on connecting, so a lost
 // connection needs nothing but another try.
 fn follow(shared: Arc<Shared>) {
-    let mut theme: Option<PanelSettings> = None;
+    // Only a new theme is worth fetching again, not a change of brightness.
+    let mut theme: Option<(String, f64)> = None;
     loop {
         let result = shared.api.events(|event| {
             let mut store = shared.store.lock().unwrap();
@@ -160,7 +183,7 @@ fn follow(shared: Arc<Shared>) {
                 Event::Update(update) => store.apply(update),
             }
             store.connected = true;
-            let panel = store.snapshot.as_ref().map(|snapshot| snapshot.panel.clone());
+            let panel = store.snapshot.as_ref().map(|snapshot| (snapshot.panel.theme.clone(), snapshot.panel.theme_stamp));
             drop(store);
             if panel != theme {
                 theme = panel;
@@ -178,8 +201,7 @@ fn follow(shared: Arc<Shared>) {
 }
 
 // Actions go out on a thread of their own, in order, so a slow plugin never holds up a frame.
-fn start_actions(shared: Arc<Shared>) -> Sender<(String, serde_json::Value)> {
-    let (sender, receiver) = channel::<(String, serde_json::Value)>();
+fn start_actions(shared: Arc<Shared>, receiver: Receiver<(String, serde_json::Value)>) {
     thread::spawn(move || {
         for (path, body) in receiver {
             if let Err(error) = shared.api.send("POST", &path, &body) {
@@ -187,42 +209,67 @@ fn start_actions(shared: Arc<Shared>) -> Sender<(String, serde_json::Value)> {
             }
         }
     });
-    sender
 }
 
 fn main() -> Result<(), slint::PlatformError> {
-    touch::follow_rotation()?;
+    touch::start()?;
     let panel = Panel::new()?;
     panel.set_rooms(ModelRc::new(VecModel::<SharedString>::default()));
     panel.set_tiles(ModelRc::new(VecModel::<TileData>::default()));
     panel.set_agenda(ModelRc::new(VecModel::<AgendaRow>::default()));
 
+    let (actions, receiver) = channel();
     let shared = Arc::new(Shared {
         api: Api::from_env(),
         store: Mutex::new(Store::default()),
         palette: Mutex::new(Palette::default()),
+        power: Mutex::new(Power::default()),
+        actions,
         pending: AtomicBool::new(false),
         panel: panel.as_weak(),
     });
 
-    let actions = start_actions(shared.clone());
+    start_actions(shared.clone(), receiver);
     panel.on_tile_tapped({
         let shared = shared.clone();
         move |plugin, id| {
+            power::touched();
             let store = shared.store.lock().unwrap();
             // With no tap of its own a tile opens its sheet, which isn't drawn here yet.
             let Some(action) = store.find_tile(&plugin, &id).and_then(|tile| tile.tap.clone()) else { return };
-            let _ = actions.send((format!("/api/plugins/{plugin}/actions/{}", action.id), serde_json::json!({ "data": action.data })));
+            let _ = shared.actions.send((format!("/api/plugins/{plugin}/actions/{}", action.id), serde_json::json!({ "data": action.data })));
         }
     });
     panel.on_room_chosen({
         let shared = shared.clone();
         move |room| {
+            power::touched();
             let Some(panel) = shared.panel.upgrade() else { return };
             panel.set_current_room(room);
             render(&panel, &shared);
         }
     });
+
+    // The touch that wakes a dim or blank screen is taken by a cover over everything, so it only
+    // wakes it.
+    panel.on_woken({
+        let shared = shared.clone();
+        move || {
+            let Some(panel) = shared.panel.upgrade() else { return };
+            shared.power.lock().unwrap().wake();
+            refresh_power(&panel, &shared);
+        }
+    });
+    let power_timer = Timer::default();
+    power_timer.start(TimerMode::Repeated, Duration::from_secs(1), {
+        let shared = shared.clone();
+        move || {
+            if let Some(panel) = shared.panel.upgrade() {
+                refresh_power(&panel, &shared);
+            }
+        }
+    });
+    refresh_power(&panel, &shared);
 
     tick(shared.clone());
     thread::spawn({

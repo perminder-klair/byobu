@@ -30,7 +30,7 @@ Current target: Raspberry Pi 4 with the 7" Touch Display 2, rotated to landscape
    command that goes back by itself if a new version fails, and a theme that follows the desktop.
 9. **Native panel** (started). The panel's screen drawn with [Slint](https://slint.dev) in Rust in
    place of Chromium, as another client of byobud. So far `panel/` draws the clock face and the
-   rooms, swipes between them and sends taps back. On a Pi 4 it draws at 60 fps straight to the
+   rooms, swipes between them, sends taps back, and dims and blanks the screen. On a Pi 4 it draws at 60 fps straight to the
    display, starts in half a second and uses under 80 MB, but the image still boots the shell.
 
 ## Building an image
@@ -258,8 +258,9 @@ For the panel itself, `cargo build --release --features kms` adds Slint's backen
 straight to the display with no compositor, chosen with `SLINT_BACKEND=linuxkms-femtovg`.
 `SLINT_KMS_ROTATION` turns the other way from cage, so the Touch Display 2 that `/etc/byobu/rotation`
 sets to 270 takes 90, and the panel turns the touchscreen to match. Nothing starts it yet, so try it
-by stopping `byobu-kiosk` and running it in its place, with the same logind session. The panel's
-backlight is left wherever the shell had it, which can be off.
+by stopping `byobu-kiosk` and running it in its place, with the same logind session. It looks after
+the screen's power as the shell does: dim after five minutes without a touch, off after the panel's
+blank setting, red on black at night, and the touch that wakes it only wakes it.
 
 To build it for the Pi on an Arch desktop, install `rust-aarch64-gnu`, copy the Pi's `/usr/lib`,
 `/usr/include` and `/usr/share/pkgconfig` into a folder to link against, and point the build at it:
