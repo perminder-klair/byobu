@@ -37,6 +37,23 @@ pub fn instant(start: &str) -> Option<i64> {
     DateTime::parse_from_rfc3339(start).ok().map(|when| when.timestamp_millis())
 }
 
+// "5 minutes ago", "yesterday" or "now", as the shell's Intl.RelativeTimeFormat words it in English.
+pub fn since<Tz: TimeZone>(time: &str, now: &DateTime<Tz>) -> Option<String> {
+    let then = DateTime::parse_from_rfc3339(time).ok()?;
+    let ago = now.timestamp() - then.timestamp();
+    for (unit, size, last) in [("day", 86_400, "yesterday"), ("hour", 3_600, ""), ("minute", 60, "")] {
+        if ago >= size {
+            let count = ago / size;
+            return Some(match count {
+                1 if !last.is_empty() => last.to_string(),
+                1 => format!("1 {unit} ago"),
+                _ => format!("{count} {unit}s ago"),
+            });
+        }
+    }
+    Some("now".into())
+}
+
 pub fn millis_to_next_minute(now: &DateTime<Local>) -> u64 {
     60_000 - now.timestamp_millis().rem_euclid(60_000) as u64
 }
@@ -64,6 +81,16 @@ mod tests {
         assert_eq!(event_time("2026-11-13T18:30:00+01:00", &now()), "fri 18:30");
         // Late in the evening somewhere else is already tomorrow here.
         assert_eq!(event_time("2026-11-10T23:30:00Z", &now()), "wed 00:30");
+    }
+
+    #[test]
+    fn says_how_long_ago_like_the_shell() {
+        assert_eq!(since("2026-11-10T17:05:00+01:00", &now()).as_deref(), Some("now"));
+        assert_eq!(since("2026-11-10T16:00:30+01:00", &now()).as_deref(), Some("1 hour ago"));
+        assert_eq!(since("2026-11-10T16:55:00+01:00", &now()).as_deref(), Some("10 minutes ago"));
+        assert_eq!(since("2026-11-09T12:00:00+01:00", &now()).as_deref(), Some("yesterday"));
+        assert_eq!(since("2026-11-07T12:00:00+01:00", &now()).as_deref(), Some("3 days ago"));
+        assert_eq!(since("soon", &now()), None);
     }
 
     #[test]

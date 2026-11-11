@@ -24,6 +24,101 @@ pub struct Tile {
     pub room: Option<String>,
     pub kind: Option<String>,
     pub tap: Option<Action>,
+    // One line for the sheet's title, like "On".
+    pub state: Option<String>,
+    #[serde(rename = "changedAt")]
+    pub changed_at: Option<String>,
+    // A sheet this version can't read is left off rather than costing the tile.
+    #[serde(default, deserialize_with = "readable")]
+    pub sheet: Option<Sheet>,
+}
+
+// What a tap with no action of its own, or a long press, opens.
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct Sheet {
+    pub tone: Option<String>,
+    // An on/off button by the name, for things whose controls don't already say on or off.
+    pub power: Option<Power>,
+    // Kinds of section this version doesn't draw are left out.
+    #[serde(deserialize_with = "readable_sections")]
+    pub sections: Vec<Section>,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct Power {
+    pub on: bool,
+    pub action: Action,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct Button {
+    pub icon: String,
+    pub label: String,
+    #[serde(default)]
+    pub selected: bool,
+    pub action: Action,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct Choice {
+    pub value: String,
+    pub label: String,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+pub struct Setpoint {
+    pub label: String,
+    pub value: f64,
+    pub min: f64,
+    pub max: f64,
+    pub step: f64,
+    pub action: Action,
+}
+
+#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum Section {
+    Slider {
+        label: String,
+        value: Option<f64>,
+        min: f64,
+        max: f64,
+        step: Option<f64>,
+        // How the value reads, like "%". Unset shows no value.
+        suffix: Option<String>,
+        // Words for particular values, like 0 reading "Off".
+        #[serde(default)]
+        names: std::collections::HashMap<String, String>,
+        // A gradient to pick a point on, instead of a bar that fills up.
+        gradient: Option<String>,
+        action: Action,
+    },
+    Choices {
+        label: String,
+        options: Vec<Choice>,
+        value: Option<String>,
+        action: Action,
+    },
+    Buttons {
+        buttons: Vec<Button>,
+    },
+    Setpoints {
+        setpoints: Vec<Setpoint>,
+        reading: Option<String>,
+    },
+    Media {
+        title: Option<String>,
+        by: Option<String>,
+        controls: Vec<Button>,
+    },
+}
+
+fn readable<'de, D: Deserializer<'de>, T: DeserializeOwned>(from: D) -> Result<Option<T>, D::Error> {
+    Ok(Option::<Value>::deserialize(from)?.and_then(|value| serde_json::from_value(value).ok()))
+}
+
+fn readable_sections<'de, D: Deserializer<'de>>(from: D) -> Result<Vec<Section>, D::Error> {
+    Ok(readable_list(Vec::<Value>::deserialize(from)?))
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]

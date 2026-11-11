@@ -47,7 +47,7 @@ pub fn touched() {
     TOUCHED.store(started().elapsed().as_millis() as u64, Ordering::Relaxed);
 }
 
-fn idle() -> Duration {
+pub fn idle() -> Duration {
     started().elapsed().saturating_sub(Duration::from_millis(TOUCHED.load(Ordering::Relaxed)))
 }
 

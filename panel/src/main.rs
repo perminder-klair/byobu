@@ -7,6 +7,7 @@ mod net;
 mod power;
 mod protocol;
 mod script;
+mod sheet;
 mod store;
 mod theme;
 mod touch;
@@ -26,6 +27,8 @@ use theme::{Palette, Rgb};
 slint::include_modules!();
 
 const RETRY: Duration = Duration::from_secs(2);
+// A sheet left open closes by itself, so the panel goes back to what was under it.
+const SHEET_IDLE: Duration = Duration::from_secs(30);
 const AGENDA_ON_FACE: usize = 5;
 // The Touch Display 2's size. A pushed theme's wallpaper can be far bigger, and every pixel of it
 // would sit in memory.
@@ -37,6 +40,8 @@ struct Shared {
     store: Mutex<Store>,
     palette: Mutex<Palette>,
     power: Mutex<Power>,
+    // The tile whose sheet is open.
+    sheet: Mutex<Option<sheet::Open>>,
     // Posts to byobud, sent in order on a thread of their own.
     actions: Sender<(String, serde_json::Value)>,
     // Set while a redraw is already on its way, so a burst of updates costs one.
@@ -105,6 +110,63 @@ fn render(panel: &Panel, shared: &Shared) {
     let agenda = store.agenda().into_iter().take(AGENDA_ON_FACE);
     sync(&panel.get_agenda(), agenda.map(|event| AgendaRow { when: clock::event_time(&event.start, &now).into(), what: event.summary.as_str().into() }).collect());
     panel.set_status(store.problem().unwrap_or_default().into());
+
+    let open = shared.sheet.lock().unwrap().clone();
+    match open.as_ref().and_then(|open| store.find_tile(&open.plugin, &open.id)) {
+        Some(tile) => {
+            let colours = sheet::colours(tile, &palette);
+            let sheet_colours = panel.global::<SheetColours>();
+            sheet_colours.set_tone(colours.tone);
+            sheet_colours.set_selected(colours.selected);
+            sheet_colours.set_fill(colours.fill);
+            panel.set_sheet_title(tile.name.as_str().into());
+            panel.set_sheet_subtitle(sheet::subtitle(tile).into());
+            panel.set_sheet_power(tile.sheet.as_ref().and_then(|sheet| sheet.power.as_ref()).map_or(-1, |power| power.on as i32));
+            let sections = tile.sheet.as_ref().map(|sheet| sheet.sections.iter().map(sheet::section_data).collect()).unwrap_or_default();
+            sync(&panel.get_sheet_sections(), sections);
+            panel.set_sheet_open(true);
+        }
+        // Closed, or its tile has gone.
+        None => {
+            if open.is_some() {
+                *shared.sheet.lock().unwrap() = None;
+            }
+            panel.set_sheet_open(false);
+        }
+    }
+}
+
+// Sends an action to the plugin that owns it, with the value a control picked.
+fn act(shared: &Shared, plugin: &str, action: &protocol::Action, value: Option<serde_json::Value>) {
+    let mut body = serde_json::json!({ "data": action.data });
+    if let Some(value) = value {
+        body["value"] = value;
+    }
+    let _ = shared.actions.send((format!("/api/plugins/{plugin}/actions/{}", action.id), body));
+}
+
+fn open_sheet(shared: &Shared, plugin: &str, id: &str) {
+    *shared.sheet.lock().unwrap() = Some(sheet::Open { plugin: plugin.into(), id: id.into() });
+    if let Some(panel) = shared.panel.upgrade() {
+        render(&panel, shared);
+    }
+}
+
+// The open sheet's tile and one of its sections, as they are now.
+fn with_section<T>(shared: &Shared, index: i32, then: impl FnOnce(&str, Option<&protocol::Section>) -> T) -> Option<T> {
+    let open = shared.sheet.lock().unwrap().clone()?;
+    let store = shared.store.lock().unwrap();
+    let tile = store.find_tile(&open.plugin, &open.id)?;
+    let section = tile.sheet.as_ref().and_then(|sheet| sheet.sections.get(usize::try_from(index).ok()?));
+    Some(then(&open.plugin, section))
+}
+
+fn sheet_input(shared: &Shared, index: i32, input: sheet::Input) {
+    power::touched();
+    let found = with_section(shared, index, |plugin, section| Some((plugin.to_string(), sheet::action(section?, input)?)));
+    if let Some(Some((plugin, (action, value)))) = found {
+        act(shared, &plugin, &action, value);
+    }
 }
 
 fn request_render(shared: &Arc<Shared>) {
@@ -163,6 +225,11 @@ fn refresh_power(panel: &Panel, shared: &Shared) {
     if let Some(percent) = change.backlight {
         let _ = shared.actions.send(("/api/backlight".into(), serde_json::json!({ "percent": percent })));
     }
+    let idle_sheet = shared.sheet.lock().unwrap().is_some() && power::idle() >= SHEET_IDLE;
+    if idle_sheet {
+        *shared.sheet.lock().unwrap() = None;
+        render(panel, shared);
+    }
     if change.redraw {
         panel.set_power(state.name().into());
         panel.set_night(night);
@@ -217,6 +284,7 @@ fn main() -> Result<(), slint::PlatformError> {
     panel.set_rooms(ModelRc::new(VecModel::<SharedString>::default()));
     panel.set_tiles(ModelRc::new(VecModel::<TileData>::default()));
     panel.set_agenda(ModelRc::new(VecModel::<AgendaRow>::default()));
+    panel.set_sheet_sections(ModelRc::new(VecModel::<SectionData>::default()));
 
     let (actions, receiver) = channel();
     let shared = Arc::new(Shared {
@@ -224,6 +292,7 @@ fn main() -> Result<(), slint::PlatformError> {
         store: Mutex::new(Store::default()),
         palette: Mutex::new(Palette::default()),
         power: Mutex::new(Power::default()),
+        sheet: Mutex::new(None),
         actions,
         pending: AtomicBool::new(false),
         panel: panel.as_weak(),
@@ -234,10 +303,60 @@ fn main() -> Result<(), slint::PlatformError> {
         let shared = shared.clone();
         move |plugin, id| {
             power::touched();
-            let store = shared.store.lock().unwrap();
-            // With no tap of its own a tile opens its sheet, which isn't drawn here yet.
-            let Some(action) = store.find_tile(&plugin, &id).and_then(|tile| tile.tap.clone()) else { return };
-            let _ = shared.actions.send((format!("/api/plugins/{plugin}/actions/{}", action.id), serde_json::json!({ "data": action.data })));
+            let tap = shared.store.lock().unwrap().find_tile(&plugin, &id).and_then(|tile| tile.tap.clone());
+            // With no tap of its own, a tile opens its sheet. That's how anything that shouldn't
+            // happen by brushing the screen, like unlocking a door, is done.
+            match tap {
+                Some(action) => act(&shared, &plugin, &action, None),
+                None => open_sheet(&shared, &plugin, &id),
+            }
+        }
+    });
+    panel.on_tile_held({
+        let shared = shared.clone();
+        move |plugin, id| {
+            power::touched();
+            open_sheet(&shared, &plugin, &id);
+        }
+    });
+    panel.on_sheet_closed({
+        let shared = shared.clone();
+        move || {
+            *shared.sheet.lock().unwrap() = None;
+            if let Some(panel) = shared.panel.upgrade() {
+                render(&panel, &shared);
+            }
+        }
+    });
+    panel.on_sheet_format({
+        let shared = shared.clone();
+        move |index, value| with_section(&shared, index, |_, section| sheet::format(section, value)).unwrap_or_default()
+    });
+    panel.on_sheet_pressed({
+        let shared = shared.clone();
+        move |index, item| sheet_input(&shared, index, sheet::Input::Pressed(item.max(0) as usize))
+    });
+    panel.on_sheet_chose({
+        let shared = shared.clone();
+        move |index, value| sheet_input(&shared, index, sheet::Input::Chose(&value))
+    });
+    panel.on_sheet_set({
+        let shared = shared.clone();
+        move |index, item, value| sheet_input(&shared, index, sheet::Input::Set(item.max(0) as usize, value))
+    });
+    panel.on_sheet_power_pressed({
+        let shared = shared.clone();
+        move || {
+            power::touched();
+            let found = with_section(&shared, 0, |plugin, _| plugin.to_string()).zip(
+                shared.sheet.lock().unwrap().clone().and_then(|open| {
+                    let store = shared.store.lock().unwrap();
+                    store.find_tile(&open.plugin, &open.id)?.sheet.as_ref()?.power.as_ref().map(|power| power.action.clone())
+                }),
+            );
+            if let Some((plugin, action)) = found {
+                act(&shared, &plugin, &action, None);
+            }
         }
     });
     panel.on_room_chosen({

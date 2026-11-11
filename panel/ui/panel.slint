@@ -1,8 +1,9 @@
 // The whole screen: the bar along the top and the pages you swipe between. So far that's the
 // clock face and the rooms of the home app, enough to show data arriving, a swipe and a tap.
 import { Blocks, Glyph, Motion, Theme, TileData, TileView, Win } from "parts.slint";
+import { ButtonData, ChoiceData, SectionData, SetpointData, SheetColours, SheetView, Stops } from "sheet.slint";
 
-export { Theme }
+export { Theme, SheetColours, SectionData, ChoiceData, ButtonData, SetpointData, Stops }
 
 export struct AgendaRow {
     when: string,
@@ -114,6 +115,7 @@ component Rooms inherits Rectangle {
     in property <[TileData]> tiles;
     callback room-chosen(string);
     callback tile-tapped(string, string);
+    callback tile-held(string, string);
     property <length> list: 210px;
     property <length> tile-width: (self.width - self.list - 3 * Theme.gap) / 3;
     property <length> pitch: 128px + Theme.gap;
@@ -153,6 +155,9 @@ component Rooms inherits Rectangle {
             tapped => {
                 root.tile-tapped(tile.plugin, tile.id);
             }
+            held => {
+                root.tile-held(tile.plugin, tile.id);
+            }
         }
     }
 }
@@ -174,6 +179,19 @@ export component Panel inherits Window {
     // Red on black, with no wallpaper.
     in property <bool> night;
     callback room-chosen(string);
+    callback tile-held(string, string);
+    // The open sheet, if any. Its sections' actions go back by section and item.
+    in property <bool> sheet-open;
+    in property <string> sheet-title;
+    in property <string> sheet-subtitle;
+    in property <int> sheet-power: -1;
+    in property <[SectionData]> sheet-sections;
+    pure callback sheet-format(int, float) -> string;
+    callback sheet-pressed(int, int);
+    callback sheet-chose(int, string);
+    callback sheet-set(int, int, float);
+    callback sheet-power-pressed();
+    callback sheet-closed();
     // A touch on a dim or blank screen, which only wakes it.
     callback woken();
     callback tile-tapped(string, string);
@@ -262,6 +280,9 @@ export component Panel inherits Window {
                     tile-tapped(plugin, id) => {
                         root.tile-tapped(plugin, id);
                     }
+                    tile-held(plugin, id) => {
+                        root.tile-held(plugin, id);
+                    }
                 }
             }
         }
@@ -289,6 +310,33 @@ export component Panel inherits Window {
             text: root.status;
             color: Theme.foreground;
             font-size: 16px;
+        }
+    }
+
+    if root.sheet-open: SheetView {
+        width: 100%;
+        height: 100%;
+        title: root.sheet-title;
+        subtitle: root.sheet-subtitle;
+        power: root.sheet-power;
+        sections: root.sheet-sections;
+        format(section, value) => {
+            return root.sheet-format(section, value);
+        }
+        pressed(section, item) => {
+            root.sheet-pressed(section, item);
+        }
+        chose(section, value) => {
+            root.sheet-chose(section, value);
+        }
+        set(section, item, value) => {
+            root.sheet-set(section, item, value);
+        }
+        power-pressed => {
+            root.sheet-power-pressed();
+        }
+        closed => {
+            root.sheet-closed();
         }
     }
 

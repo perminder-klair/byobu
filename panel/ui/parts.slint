@@ -106,9 +106,13 @@ export struct TileData {
     unavailable: bool,
 }
 
+// Tap for what a tile does, and a long press for its sheet.
 export component TileView inherits Rectangle {
     in property <TileData> tile;
     callback tapped();
+    callback held();
+    property <bool> pressing;
+    property <bool> was-held;
     property <bool> lit: tile.active && !tile.unavailable;
     background: lit ? tile.fill : Theme.window;
     border-width: 2px;
@@ -146,8 +150,28 @@ export component TileView inherits Rectangle {
     }
     TouchArea {
         enabled: !tile.unavailable;
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down {
+                root.was-held = false;
+                root.pressing = true;
+            } else if event.kind != PointerEventKind.move {
+                root.pressing = false;
+            }
+        }
         clicked => {
-            root.tapped();
+            if !root.was-held {
+                root.tapped();
+            }
+        }
+    }
+    // A press this long opens the sheet instead of tapping.
+    Timer {
+        interval: 500ms;
+        running: root.pressing;
+        triggered => {
+            root.pressing = false;
+            root.was-held = true;
+            root.held();
         }
     }
 }

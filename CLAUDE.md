@@ -138,6 +138,9 @@ the shell stays as the phone app.
   turns the touchscreen with a libinput calibration matrix, through Slint's
   `unstable-libinput-09` hook. A rendering notifier moves the picture on a rotated screen in Slint
   1.18, which is why `BYOBU_FRAMES` refuses to run there. `BYOBU_TOUCHES` logs where touches land.
+- `ui/sheet.slint` and `src/sheet.rs` are `Sheet.tsx`. Sections reach the screen as one
+  `SectionData` struct whichever kind they are, and presses come back by section and item, which
+  `sheet::action` turns into the tile's current action.
 - `src/power.rs` is `power.ts`: the states, night, and the backlight, posted to byobud's
   `/api/backlight` from a timer every second. Touches are noted in the libinput hook as a time
   only, and a cover over the screen while it's dim or blank takes the touch that wakes it.

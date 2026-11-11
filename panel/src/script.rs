@@ -1,7 +1,7 @@
 // Works the screen without a finger, for checking it where there's nothing to touch, and for
 // taking pictures of it. BYOBU_SCRIPT holds steps separated by semicolons, run a moment apart:
 //
-//   BYOBU_SCRIPT="wait; swipe 1000 400 300 400; tap 500 150; save panel.png; quit"
+//   BYOBU_SCRIPT="wait; swipe 1000 400 300 400; tap 500 150; hold 500 300; save panel.png; quit"
 use crate::Panel;
 use slint::platform::{PointerEventButton, WindowEvent};
 use slint::{ComponentHandle, LogicalPosition, RenderingState, Timer};
@@ -42,6 +42,11 @@ fn steps(script: &str) -> VecDeque<Step> {
                 // Held for as long as a quick finger would.
                 steps.push_back((BETWEEN_MOVES * 6, pointer(released, x, y)));
             }
+            // A long press, held past the half second that opens a tile's sheet.
+            (Some("hold"), &[x, y]) => {
+                steps.push_back((BETWEEN_STEPS, pointer(pressed, x, y)));
+                steps.push_back((Duration::from_millis(700), pointer(released, x, y)));
+            }
             (Some("swipe"), &[x, y, to_x, to_y]) => {
                 steps.push_back((BETWEEN_STEPS, pointer(pressed, x, y)));
                 for i in 1..=MOVES {
@@ -57,7 +62,7 @@ fn steps(script: &str) -> VecDeque<Step> {
             (Some("wait"), _) => steps.push_back((BETWEEN_STEPS, Box::new(|_| {}))),
             (Some("quit"), _) => steps.push_back((BETWEEN_STEPS, Box::new(|_| slint::quit_event_loop().unwrap_or_default()))),
             (None, _) => {}
-            _ => eprintln!("Skipping a step that isn't a tap, swipe, wait, save or quit: {step}"),
+            _ => eprintln!("Skipping a step that isn't a tap, hold, swipe, wait, save or quit: {step}"),
         }
     }
     steps

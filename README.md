@@ -30,7 +30,7 @@ Current target: Raspberry Pi 4 with the 7" Touch Display 2, rotated to landscape
    command that goes back by itself if a new version fails, and a theme that follows the desktop.
 9. **Native panel** (started). The panel's screen drawn with [Slint](https://slint.dev) in Rust in
    place of Chromium, as another client of byobud. So far `panel/` draws the clock face and the
-   rooms, swipes between them, sends taps back, and dims and blanks the screen. On a Pi 4 it draws at 60 fps straight to the
+   rooms, swipes between them, sends taps back, opens tiles' sheets, and dims and blanks the screen. On a Pi 4 it draws at 60 fps straight to the
    display, starts in half a second and uses under 80 MB, but the image still boots the shell.
 
 ## Building an image
