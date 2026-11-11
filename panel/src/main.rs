@@ -8,6 +8,7 @@ mod protocol;
 mod script;
 mod store;
 mod theme;
+mod touch;
 
 use chrono::Local;
 use net::{Api, Event};
@@ -190,6 +191,7 @@ fn start_actions(shared: Arc<Shared>) -> Sender<(String, serde_json::Value)> {
 }
 
 fn main() -> Result<(), slint::PlatformError> {
+    touch::follow_rotation()?;
     let panel = Panel::new()?;
     panel.set_rooms(ModelRc::new(VecModel::<SharedString>::default()));
     panel.set_tiles(ModelRc::new(VecModel::<TileData>::default()));
@@ -228,5 +230,6 @@ fn main() -> Result<(), slint::PlatformError> {
         move || follow(shared)
     });
     script::start(&panel);
+    script::count_frames(&panel);
     panel.run()
 }

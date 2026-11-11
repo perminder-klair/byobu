@@ -423,6 +423,7 @@ dependencies = [
  "chrono",
  "image",
  "indexmap",
+ "input",
  "serde",
  "serde_json",
  "slint",
@@ -1580,6 +1581,7 @@ dependencies = [
  "i-slint-core",
  "i-slint-core-macros",
  "i-slint-renderer-femtovg",
+ "input",
 ]
 
 [[package]]

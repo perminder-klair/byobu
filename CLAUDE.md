@@ -133,6 +133,14 @@ the shell stays as the phone app.
   `ui/panel.slint`.
 - `BYOBU_SCRIPT` (`src/script.rs`) taps, swipes and saves pictures, which is how to see a change
   where there's no display. Under Xvfb, `SLINT_BACKEND=winit-software` needs no GPU.
+- On the Pi it runs with `--features kms`, `SLINT_BACKEND=linuxkms-femtovg` and
+  `SLINT_KMS_ROTATION=90`, which is cage's 270. Slint turns only the picture, so `src/touch.rs`
+  turns the touchscreen with a libinput calibration matrix, through Slint's
+  `unstable-libinput-09` hook. A rendering notifier moves the picture on a rotated screen in Slint
+  1.18, which is why `BYOBU_FRAMES` refuses to run there. `BYOBU_TOUCHES` logs where touches land.
+- `ffmpeg -device /dev/dri/card1 -f kmsgrab -i - -frames:v 1 -vf hwdownload,format=bgr0 x.png`
+  as root captures what's really on the panel's screen, where `save` in `BYOBU_SCRIPT` only shows
+  what Slint meant to draw.
 
 ### On the panel
 

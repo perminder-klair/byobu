@@ -12,11 +12,12 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 slint = { version = "1.18", default-features = false, features = ["std", "compat-1-2", "backend-winit", "renderer-femtovg", "renderer-software"] }
 ureq = { version = "2", default-features = false }
+input = { version = "0.10", default-features = false, optional = true }
 
 [features]
 # Draws straight to the display with no compositor, which is how it runs on the panel. Needs
 # libinput, libudev, libgbm and libxkbcommon to build, so it's left out of a build on a desk.
-kms = ["slint/backend-linuxkms-noseat"]
+kms = ["slint/backend-linuxkms-noseat", "slint/unstable-libinput-09", "dep:input"]
 
 [build-dependencies]
 slint-build = "1.18"

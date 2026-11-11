@@ -178,6 +178,8 @@ export component Panel inherits Window {
     property <length> face-height: self.height - self.face-y - Theme.edge;
 
     title: "Byōbu";
+    // Under a compositor like cage, winit would otherwise draw a title bar of its own.
+    no-frame: true;
     preferred-width: 1280px;
     preferred-height: 720px;
     background: Theme.background;
