@@ -1,0 +1,472 @@
+// The sheet a tap or a long press opens, drawn from what the plugin sends: sliders, choices,
+// buttons, setpoints and media, as shell/src/Sheet.tsx draws them. Nothing here knows what kind of
+// thing it's showing. main.rs fills it from the tile and sends what's done back to its plugin.
+import { Icon, Theme } from "parts.slint";
+
+export struct ChoiceData {
+    value: string,
+    label: string,
+}
+
+export struct ButtonData {
+    icon: string,
+    label: string,
+    selected: bool,
+}
+
+export struct SetpointData {
+    label: string,
+    value: float,
+    min: float,
+    max: float,
+    step: float,
+}
+
+// A gradient a slider picks a point on, as up to seven stops left to right. Unused stops repeat
+// the last colour at the end.
+export struct Stops {
+    c0: color, p0: float,
+    c1: color, p1: float,
+    c2: color, p2: float,
+    c3: color, p3: float,
+    c4: color, p4: float,
+    c5: color, p5: float,
+    c6: color, p6: float,
+}
+
+// One section, whichever kind it is. Only the fields its kind uses are filled.
+export struct SectionData {
+    kind: string,
+    label: string,
+    // A slider's.
+    value: float,
+    known: bool,
+    min: float,
+    max: float,
+    step: float,
+    gradient: Stops,
+    has-gradient: bool,
+    // Choices.
+    options: [ChoiceData],
+    chosen: string,
+    // Buttons, and media's controls.
+    buttons: [ButtonData],
+    setpoints: [SetpointData],
+    reading: string,
+    // Media.
+    title: string,
+    by: string,
+}
+
+// The sheet's own colours, worked out in theme.rs the way styles.css mixes them.
+export global SheetColours {
+    in property <color> tone;
+    // A chosen chip or a button showing the state a device is in.
+    in property <color> selected;
+    // What a slider fills with.
+    in property <color> fill;
+}
+
+// How long a picked value stays on screen if the device never reports it back.
+global Picked {
+    out property <duration> keep: 5s;
+}
+
+component IconButton inherits Rectangle {
+    in property <string> icon;
+    in property <bool> selected;
+    callback clicked();
+    width: 56px;
+    height: 56px;
+    background: selected ? SheetColours.selected : Theme.raised;
+    animate background { duration: 200ms; }
+    Icon {
+        icon: root.icon;
+    }
+    TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+component Label inherits Text {
+    color: Theme.text-dim;
+    font-size: 15px;
+}
+
+// A value picked by dragging, sent when the finger lifts so a drag is one change for the device.
+// What was picked stays on screen until the device reports a change, or a few seconds pass.
+component SliderView inherits VerticalLayout {
+    in property <SectionData> section;
+    pure callback format(float) -> string;
+    callback set(float);
+    property <float> picked;
+    property <bool> holding;
+    property <bool> dragging;
+    property <float> actual: section.value;
+    property <float> shown: holding ? picked : section.value;
+    property <bool> known: holding || section.known;
+    property <float> at: known ? (shown - section.min) / (section.max - section.min) : 0;
+    changed actual => {
+        holding = false;
+    }
+    spacing: 8px;
+
+    pure function pick-at(x: length) -> float {
+        let fraction = Math.clamp(x / track.width, 0, 1);
+        let step = section.step > 0 ? section.step : 1;
+        return Math.min(section.max, section.min + Math.round(fraction * (section.max - section.min) / step) * step);
+    }
+
+    HorizontalLayout {
+        Label {
+            text: section.label;
+        }
+        Label {
+            horizontal-alignment: right;
+            text: root.known ? root.format(root.shown) : "";
+        }
+    }
+    track := Rectangle {
+        height: 64px;
+        background: section.has-gradient ? @linear-gradient(90deg,
+            section.gradient.c0 section.gradient.p0 * 100%, section.gradient.c1 section.gradient.p1 * 100%,
+            section.gradient.c2 section.gradient.p2 * 100%, section.gradient.c3 section.gradient.p3 * 100%,
+            section.gradient.c4 section.gradient.p4 * 100%, section.gradient.c5 section.gradient.p5 * 100%,
+            section.gradient.c6 section.gradient.p6 * 100%) : Theme.raised;
+        clip: true;
+        // Never quite empty, so there's always a handle to grab.
+        if !section.has-gradient: Rectangle {
+            x: 0;
+            width: 28px + (parent.width - 28px) * root.at;
+            background: SheetColours.fill;
+        }
+        if section.has-gradient && root.known: Rectangle {
+            x: (parent.width - 16px) * root.at;
+            y: 8px;
+            width: 16px;
+            height: parent.height - 16px;
+            border-width: 4px;
+            border-color: white;
+        }
+        TouchArea {
+            pointer-event(event) => {
+                if event.kind == PointerEventKind.down {
+                    root.dragging = true;
+                    root.holding = true;
+                    root.picked = root.pick-at(self.mouse-x);
+                } else if event.kind == PointerEventKind.up && root.dragging {
+                    root.dragging = false;
+                    root.picked = root.pick-at(self.mouse-x);
+                    root.set(root.picked);
+                } else if event.kind == PointerEventKind.cancel {
+                    root.dragging = false;
+                }
+            }
+            moved => {
+                if root.dragging {
+                    root.picked = root.pick-at(self.mouse-x);
+                }
+            }
+        }
+    }
+    Timer {
+        interval: Picked.keep;
+        running: root.holding && !root.dragging;
+        triggered => {
+            root.holding = false;
+        }
+    }
+}
+
+// A number stepped up and down, like a thermostat's target. Taps in quick succession make one
+// change rather than one each.
+component SetpointView inherits VerticalLayout {
+    in property <SetpointData> setpoint;
+    callback set(float);
+    property <float> picked;
+    property <bool> holding;
+    property <bool> sending;
+    property <float> actual: setpoint.value;
+    property <float> shown: holding ? picked : setpoint.value;
+    changed actual => {
+        holding = false;
+    }
+    alignment: start;
+    spacing: 6px;
+
+    function nudge(direction: int) {
+        picked = Math.round(Math.clamp(shown + direction * setpoint.step, setpoint.min, setpoint.max) * 10) / 10;
+        holding = true;
+        sending = false;
+        sending = true;
+        send-timer.restart();
+    }
+
+    Label {
+        text: setpoint.label;
+        horizontal-alignment: center;
+    }
+    HorizontalLayout {
+        spacing: 14px;
+        alignment: center;
+        IconButton {
+            y: (parent.height - self.height) / 2;
+            icon: "M19,13H5V11H19V13Z";
+            clicked => {
+                root.nudge(-1);
+            }
+        }
+        Text {
+            min-width: 150px;
+            text: root.shown + "°";
+            color: Theme.foreground;
+            font-size: 56px;
+            font-weight: 300;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+        IconButton {
+            y: (parent.height - self.height) / 2;
+            icon: "M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z";
+            clicked => {
+                root.nudge(1);
+            }
+        }
+    }
+    send-timer := Timer {
+        interval: 600ms;
+        running: root.sending;
+        triggered => {
+            root.sending = false;
+            root.set(root.picked);
+        }
+    }
+    Timer {
+        interval: Picked.keep;
+        running: root.holding && !root.sending;
+        triggered => {
+            root.holding = false;
+        }
+    }
+}
+
+component ActionButton inherits Rectangle {
+    in property <ButtonData> button;
+    callback clicked();
+    height: 72px;
+    background: button.selected ? SheetColours.selected : Theme.raised;
+    animate background { duration: 200ms; }
+    HorizontalLayout {
+        alignment: center;
+        spacing: 10px;
+        Icon {
+            y: (parent.height - self.height) / 2;
+            icon: button.icon;
+        }
+        Text {
+            text: button.label;
+            color: Theme.foreground;
+            font-weight: 500;
+            vertical-alignment: center;
+        }
+    }
+    TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+component SectionView inherits VerticalLayout {
+    in property <SectionData> section;
+    pure callback format(float) -> string;
+    // A button or a media control, by its place in the section.
+    callback pressed(int);
+    callback chose(string);
+    // A slider's value, or a setpoint's by its place.
+    callback set(int, float);
+
+    if section.kind == "slider": SliderView {
+        section: root.section;
+        format(value) => {
+            return root.format(value);
+        }
+        set(value) => {
+            root.set(0, value);
+        }
+    }
+    if section.kind == "choices": VerticalLayout {
+        spacing: 8px;
+        Label {
+            text: section.label;
+        }
+        HorizontalLayout {
+            spacing: 8px;
+            alignment: start;
+            for option in section.options: Rectangle {
+                height: 52px;
+                background: option.value == section.chosen ? SheetColours.selected : Theme.raised;
+                animate background { duration: 200ms; }
+                HorizontalLayout {
+                    padding-left: 22px;
+                    padding-right: 22px;
+                    Text {
+                        text: option.label;
+                        color: Theme.foreground;
+                        font-size: 17px;
+                        vertical-alignment: center;
+                    }
+                }
+                TouchArea {
+                    clicked => {
+                        root.chose(option.value);
+                    }
+                }
+            }
+        }
+    }
+    if section.kind == "buttons": HorizontalLayout {
+        spacing: 10px;
+        for button[index] in section.buttons: ActionButton {
+            button: button;
+            clicked => {
+                root.pressed(index);
+            }
+        }
+    }
+    if section.kind == "setpoints": VerticalLayout {
+        spacing: 12px;
+        HorizontalLayout {
+            alignment: center;
+            spacing: 56px;
+            for setpoint[index] in section.setpoints: SetpointView {
+                setpoint: setpoint;
+                set(value) => {
+                    root.set(index, value);
+                }
+            }
+        }
+        if section.reading != "": Label {
+            text: section.reading;
+            horizontal-alignment: center;
+        }
+    }
+    if section.kind == "media": VerticalLayout {
+        spacing: 16px;
+        if section.title != "": VerticalLayout {
+            spacing: 4px;
+            Text {
+                text: section.title;
+                color: Theme.foreground;
+                font-size: 21px;
+                font-weight: 500;
+                wrap: word-wrap;
+                overflow: elide;
+            }
+            Label {
+                text: section.by;
+                overflow: elide;
+            }
+        }
+        HorizontalLayout {
+            alignment: center;
+            spacing: 24px;
+            for control[index] in section.buttons: IconButton {
+                icon: control.icon;
+                selected: control.selected;
+                clicked => {
+                    root.pressed(index);
+                }
+            }
+        }
+    }
+}
+
+// The dimmed cover and the sheet on it. A press that starts on the cover closes it, so the long
+// press that opened it doesn't, as its finger lifts over the sheet.
+export component SheetView inherits Rectangle {
+    in property <string> title;
+    in property <string> subtitle;
+    // -1 for no power button, otherwise whether it's on.
+    in property <int> power: -1;
+    in property <[SectionData]> sections;
+    pure callback format(int, float) -> string;
+    callback pressed(int, int);
+    callback chose(int, string);
+    callback set(int, int, float);
+    callback power-pressed();
+    callback closed();
+    background: #0000008c;
+
+    TouchArea {
+        clicked => {
+            root.closed();
+        }
+    }
+
+    Rectangle {
+        width: Math.min(780px, root.width - 64px);
+        height: Math.min(body.preferred-height, root.height - 40px);
+        background: Theme.background;
+        border-width: 2px;
+        border-color: SheetColours.tone;
+        // Taps on the sheet itself stay on it.
+        TouchArea { }
+        body := VerticalLayout {
+            padding-left: 24px;
+            padding-right: 24px;
+            padding-top: 20px;
+            padding-bottom: 26px;
+            spacing: 20px;
+            alignment: start;
+            HorizontalLayout {
+                spacing: 10px;
+                VerticalLayout {
+                    alignment: center;
+                    spacing: 2px;
+                    Text {
+                        text: root.title;
+                        color: Theme.foreground;
+                        font-size: 26px;
+                        font-weight: 500;
+                        overflow: elide;
+                    }
+                    if root.subtitle != "": Label {
+                        text: root.subtitle;
+                        overflow: elide;
+                    }
+                }
+                if root.power >= 0: IconButton {
+                    icon: "M16.56,5.44L15.11,6.89C16.84,7.94 18,9.83 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12C6,9.83 7.16,7.94 8.88,6.88L7.44,5.44C5.36,6.88 4,9.28 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12C20,9.28 18.64,6.88 16.56,5.44M13,3H11V13H13";
+                    selected: root.power == 1;
+                    clicked => {
+                        root.power-pressed();
+                    }
+                }
+                IconButton {
+                    icon: "M19,6.41L17.59,5L12,10.59L6.41,5L5,6.41L10.59,12L5,17.59L6.41,19L12,13.41L17.59,19L19,17.59L13.41,12L19,6.41Z";
+                    clicked => {
+                        root.closed();
+                    }
+                }
+            }
+            for section[index] in root.sections: SectionView {
+                section: section;
+                format(value) => {
+                    return root.format(index, value);
+                }
+                pressed(item) => {
+                    root.pressed(index, item);
+                }
+                chose(value) => {
+                    root.chose(index, value);
+                }
+                set(item, value) => {
+                    root.set(index, item, value);
+                }
+            }
+        }
+    }
+}

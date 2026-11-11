@@ -134,7 +134,13 @@ async function api(core: Core, req: IncomingMessage, res: ServerResponse, path: 
     res.writeHead(200, { "Content-Type": "text/event-stream", "Cache-Control": "no-store", Connection: "keep-alive" });
     res.write(`event: snapshot\ndata: ${JSON.stringify(core.snapshot())}\n\n`);
     const unsubscribe = core.subscribe((update) => res.write(`data: ${JSON.stringify(update)}\n\n`));
-    req.on("close", unsubscribe);
+    // A comment every so often, which clients ignore, so one that hears nothing for a while knows
+    // the connection has gone quietly rather than waiting on it forever.
+    const keepalive = setInterval(() => res.write(": still here\n\n"), 30_000);
+    req.on("close", () => {
+      clearInterval(keepalive);
+      unsubscribe();
+    });
     return;
   }
 
